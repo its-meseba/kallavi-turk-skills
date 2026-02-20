@@ -1,0 +1,26 @@
+# Logs
+logs/
+
+# Reports
+reports/
+
+# Portfolio data (contains personal financial information)
+portfolio/
+
+# Tracking data (price history, evaluation logs, plots)
+investor-skill/scripts/tracking/price_history.txt
+investor-skill/scripts/tracking/evaluation_log.csv
+investor-skill/scripts/tracking/advisory_actions_log.json
+investor-skill/scripts/tracking/real_estate_price_cache.json
+investor-skill/scripts/tracking/latest_prices.json
+investor-skill/scripts/tracking/plots/
+
+# Environment and IDE
+.env
+__pycache__/
+*.pyc
+.vscode/
+.cursor/
+last_run.txt
+last_price_update.txt
+api.txt
