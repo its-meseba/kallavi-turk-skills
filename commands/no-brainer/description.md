@@ -57,6 +57,20 @@ Formatting rules:
    - Update the issue via Linear MCP (`save_issue`)
    - Confirm: "Updated [ISSUE-ID]: [issue title]"
 
+## Batch Processing (Multiple Issues)
+
+When the user asks to run this on multiple issues at once (e.g., "update all my issues from last 2 days"):
+
+1. **Fetch the issue list** via `list_issues` with the user's filters
+2. **Filter candidates** — skip issues with empty descriptions, already-summarized issues (check for `# Executive Summary` at top), archived, and canceled issues
+3. **Spawn parallel subagents** — one **"issue-summarizer"** subagent per issue, each:
+   - Fetches full issue details + comments (including image analysis via WebFetch → Read)
+   - Generates the executive summary
+   - Returns the summary text + issue metadata
+4. **Present all summaries** to the user for batch confirmation
+5. **Update all issues in parallel** — call `save_issue` for each issue in the same turn
+6. This is significantly faster than processing issues sequentially
+
 ## Quality Checks
 - Each point is ONE sentence. No compound sentences with semicolons. No "and also."
 - Problem states what's broken — not symptoms, not history
