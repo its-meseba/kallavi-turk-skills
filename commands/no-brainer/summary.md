@@ -21,34 +21,32 @@ Input: $ARGUMENTS (if empty, ask "What do you want me to summarize?")
 
 3. **Write the summary** in this exact format:
 
-```
-**Executive Summary**
+```markdown
+# Executive Summary
 
-**Problem:** [One sentence — what's broken or missing]
-
-**Solution:** [One sentence — the approach or path forward]
-
-**Impact:** [One sentence — what changes when this is done]
-```
-
-4. **Decide on Context.** If there's genuinely useful background (links, prior decisions, constraints), add:
-
-```
----
+1. **Problem:** [One sentence — what's broken or missing]
+2. **Solution:** [One sentence — the approach or path forward]
+3. **Impact:** [One sentence — what changes when this is done]
 
 **Context**
 
 [One paragraph max. Supplementary only — the 3 points above must stand on their own.]
+
+---
 ```
 
-If no useful context, skip it entirely.
+Formatting rules:
+- `# Executive Summary` is always an H1 header
+- Problem, Solution, Impact are a numbered ordered list (1. 2. 3.) with bold labels
+- No divider before Context — it flows naturally after the 3 points
+- Divider (`---`) goes AFTER Context, before any remaining content below
+- Context section is optional — only include when genuinely useful. If no context needed, skip it entirely (no divider either)
 
-5. **Present the summary** directly to the user.
+4. **Present the summary** directly to the user.
 
 ## Quality Checks
 - Each point is ONE sentence. No compound sentences with semicolons. No "and also."
 - Problem states what's broken — not symptoms, not history
 - Solution states the approach — not implementation details, not a task list
 - Impact states what changes — in measurable or observable terms
-- Context is optional and max one paragraph
 </process>
