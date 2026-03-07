@@ -18,7 +18,7 @@ You manage the user's MiniDecade system — a 156-week (3-year) mastery framewor
 ## Vault Structure
 
 ```
-Work/Mine/MiniDecade/
+MiniDecade/
   0. What is MiniDecade/              # Methodology docs (read-only reference)
     Tools/
       .habitadd-config.json           # HabitAdd API key and settings
@@ -42,14 +42,14 @@ Work/Mine/MiniDecade/
 ### Existing Fields (vault paths)
 
 Read the actual vault to discover current fields — do NOT rely on this static list:
-- AI Engineering → `Work/Mine/MiniDecade/AI Engineering/`
-- Context Engineering → `Work/Mine/MiniDecade/Context Engineering/`
-- Backend Engineering → `Work/Mine/MiniDecade/Backend Engineering/`
-- SaaS Product → `Work/Mine/MiniDecade/SaaS Product/`
-- Entrepreneurship → `Work/Mine/MiniDecade/Entrepreneurship/`
-- Polyglot[Russian] → `Work/Mine/MiniDecade/Polyglot[Russian]/`
-- Personal Growth → `Work/Mine/MiniDecade/Personal Growth/`
-- Mobile Applications and Viral Apps → `Work/Mine/MiniDecade/Mobile Applications and Viral Apps/`
+- AI Engineering → `MiniDecade/AI Engineering/`
+- Context Engineering → `MiniDecade/Context Engineering/`
+- Backend Engineering → `MiniDecade/Backend Engineering/`
+- SaaS Product → `MiniDecade/SaaS Product/`
+- Entrepreneurship → `MiniDecade/Entrepreneurship/`
+- Polyglot[Russian] → `MiniDecade/Polyglot[Russian]/`
+- Personal Growth → `MiniDecade/Personal Growth/`
+- Mobile Applications and Viral Apps → `MiniDecade/Mobile Applications and Viral Apps/`
 
 New fields are created as the user develops them (use `/mini-decade:new-field`).
 
@@ -334,7 +334,7 @@ Wait for all agents to complete, then synthesize their findings.
 
 **Phase 3: Create Structure**
 ```bash
-FIELD_PATH="/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/[Field Name]"
+FIELD_PATH="/Users/mehmetsemihbabacan/dev/brain/MiniDecade/[Field Name]"
 mkdir -p "$FIELD_PATH/Plans"
 mkdir -p "$FIELD_PATH/Progress"
 mkdir -p "$FIELD_PATH/Resources"
@@ -604,7 +604,7 @@ Only suggest when the user is interacting with MiniDecade or asks "what should I
 
 ### Configuration
 
-**Global config:** `Work/Mine/MiniDecade/0. What is MiniDecade/Tools/.habitadd-config.json`
+**Global config:** `MiniDecade/0. What is MiniDecade/Tools/.habitadd-config.json`
 ```json
 {
   "apiKey": "hab_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -641,7 +641,7 @@ All calls use POST with JSON body `{"data": {"apiKey": "...", ...}}`.
 
 ```bash
 # Read API key
-API_KEY=$(cat "/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/0. What is MiniDecade/Tools/.habitadd-config.json" | python3 -c "import sys,json; print(json.load(sys.stdin)['apiKey'])")
+API_KEY=$(cat "/Users/mehmetsemihbabacan/dev/brain/MiniDecade/0. What is MiniDecade/Tools/.habitadd-config.json" | python3 -c "import sys,json; print(json.load(sys.stdin)['apiKey'])")
 
 # Get habits
 curl -s -X POST "https://us-central1-habits-x.cloudfunctions.net/agentGetHabits" \
@@ -684,7 +684,7 @@ Fields can have large resources (textbooks, courses) ingested into a semantic se
 
 ### Scripts
 
-Located at `Work/Mine/MiniDecade/0. What is MiniDecade/Tools/scripts/`:
+Located at `MiniDecade/0. What is MiniDecade/Tools/scripts/`:
 
 **Ingest a resource:**
 ```bash
@@ -716,7 +716,7 @@ Returns relevant passages with source citations (resource, lesson, page range).
 ### Query from Python (for sub-agents)
 
 ```bash
-python3 "/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/0. What is MiniDecade/Tools/scripts/query-resource.py" \
+python3 "/Users/mehmetsemihbabacan/dev/brain/MiniDecade/0. What is MiniDecade/Tools/scripts/query-resource.py" \
   "query text" --field "Field Name" --top 3 --format json
 ```
 
@@ -757,7 +757,7 @@ obsidian-cli open "note name" --append "content to append"
 
 If `obsidian-cli` fails for nested paths, fall back to direct file operations:
 ```bash
-mkdir -p "/Users/mehmetsemihbabacan/dev/brain/Work/Mine/MiniDecade/[Field Name]/Plans"
+mkdir -p "/Users/mehmetsemihbabacan/dev/brain/MiniDecade/[Field Name]/Plans"
 ```
 Then write/append to `.md` files directly.
 
