@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Little Paws: Work Hard, Play Hard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    body { font-family: 'Poppins', sans-serif; }
+    .panel-img { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .scene-thumb { border-radius: 8px; transition: transform 0.2s; }
+    .scene-thumb:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-pink-50 to-purple-50 min-h-screen">
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-purple-800">🐾 Little Paws</h1>
+      <p class="text-purple-600 mt-2">Work Hard, Play Hard</p>
+      <p class="text-xs text-gray-500 mt-1">Updated with character context • Male + Female</p>
+    </div>
+    
+    <!-- Video Section -->
+    <div class="bg-white rounded-2xl p-4 shadow-lg mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">📺 Instagram Reel (9:16, 2.5s/frame)</h2>
+      <video controls class="w-full rounded-lg" poster="1.png">
+        <source src="story.mp4" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+      <div class="mt-3 flex gap-2">
+        <a href="story.mp4" download class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg text-center hover:bg-purple-700 transition">
+          <i class="fas fa-download mr-2"></i>Download Video
+        </a>
+      </div>
+    </div>
+    
+    <!-- Panel Section -->
+    <div class="bg-white rounded-2xl p-4 shadow-lg mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">🖼️ Story Panel (4 Frames with Text)</h2>
+      <img src="1.png" alt="Story Panel" class="w-full panel-img">
+      <div class="mt-3 flex gap-2">
+        <a href="1.png" download class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-center hover:bg-blue-700 transition">
+          <i class="fas fa-download mr-2"></i>Download Panel
+        </a>
+      </div>
+    </div>
+    
+    <!-- Individual Scenes -->
+    <div class="bg-white rounded-2xl p-4 shadow-lg mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">🎬 Individual Scenes</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div><img src="scenes/scene1.png" class="w-full scene-thumb rounded-lg"><p class="text-xs text-center mt-1 text-gray-500">1. You've been working so hard...</p></div>
+        <div><img src="scenes/scene2.png" class="w-full scene-thumb rounded-lg"><p class="text-xs text-center mt-1 text-gray-500">2. Take a break, please?</p></div>
+        <div><img src="scenes/scene3.png" class="w-full scene-thumb rounded-lg"><p class="text-xs text-center mt-1 text-gray-500">3. *exhausted sigh*</p></div>
+        <div><img src="scenes/scene4.png" class="w-full scene-thumb rounded-lg"><p class="text-xs text-center mt-1 text-gray-500">4. I'll take care of you 💕</p></div>
+      </div>
+    </div>
+    
+    <!-- Character Info -->
+    <div class="bg-white rounded-2xl p-4 shadow-lg mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">🐱 Characters</h2>
+      <div class="text-sm text-gray-600 space-y-2">
+        <p><strong>Male (bigger):</strong> Larger build, dark brown eyes, green pendant, loving & brave</p>
+        <p><strong>Female (smaller):</strong> Smaller, emerald-green eyes, beaded necklace, caring & compassionate</p>
+      </div>
+    </div>
+    
+    <!-- Instagram Caption -->
+    <div class="bg-white rounded-2xl p-4 shadow-lg">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">📝 Instagram Caption</h2>
+      <textarea id="caption" class="w-full h-32 p-3 border rounded-lg text-sm font-mono bg-gray-50" readonly>🐾 Little Paws: Work Hard, Play Hard
+
+Male works too hard, female takes care of him with love.
+
+#LittlePaws #CuteCats #Kawaii #CatCouple #ChibiCats #CatComic #Webtoon #DailyComic #CatLovers #FluffyCats #KawaiiArt #CatStory #PetComic #CuteArt</textarea>
+      <button onclick="copyCaption()" class="mt-3 w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">
+        <i class="fas fa-copy mr-2"></i>Copy Caption
+      </button>
+    </div>
+  </div>
+  
+  <script>
+    function copyCaption() {
+      const caption = document.getElementById('caption');
+      caption.select();
+      document.execCommand('copy');
+      alert('Caption copied!');
+    }
+  </script>
+</body>
+</html>
