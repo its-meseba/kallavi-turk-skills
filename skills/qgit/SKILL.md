@@ -44,15 +44,30 @@ git push
 
 If there's no upstream, use `git push -u origin <branch>`.
 
-### 5. Report
+### 5. Update Linear issues (optional)
 
-One line: the commit hash, branch, and what was pushed. Done.
+If the user provided Linear issue IDs/URLs (e.g., `/qgit JOY-1534` or `/qgit JOY-1534 JOY-1535`):
+
+1. Analyze the commits being pushed — understand what was done from diffs and commit messages
+2. Generate a **walk-me-through** activity log following the `/no-brainer:walk-me-through` format:
+   - Break the work into logical steps (3-8 steps)
+   - Each step: `### n/total — [Plain-language meaning]` + `**Technical Context:** [files, implementation details]`
+3. Show the walk-me-through to the user for confirmation
+4. Post as a comment on each provided Linear issue using `save_comment`
+
+This is **not the default** — only triggered when issue IDs are explicitly provided.
+
+### 6. Report
+
+One line: the commit hash, branch, and what was pushed. If Linear issues were updated, mention that too. Done.
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
 | `/qgit` | Stage, commit, and push in one shot |
+| `/qgit JOY-123` | Stage, commit, push + post walk-me-through on Linear issue |
+| `/qgit JOY-123 JOY-456` | Same, but updates multiple Linear issues |
 | `/qgit:help` | Show help — what qgit does and how to use it |
 
 ## Help (`/qgit:help`)
@@ -76,10 +91,12 @@ Stage, commit, and push in one fluid motion. One command, minimal output.
 #### Usage
 
 ```
-/qgit
+/qgit                     # just ship it
+/qgit JOY-123             # ship it + update Linear issue with activity walk-through
+/qgit JOY-123 JOY-456     # ship it + update multiple issues
 ```
 
-That's it. No arguments needed. Just say `/qgit`, "commit and push", "ship it", or "push this".
+Just say `/qgit`, "commit and push", "ship it", or "push this". Optionally pass Linear issue IDs to post a step-by-step activity log (walk-me-through) as a comment.
 
 #### Safety rules
 

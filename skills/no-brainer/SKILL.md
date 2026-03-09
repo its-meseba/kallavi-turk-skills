@@ -67,6 +67,7 @@ State what changes — in measurable or observable terms. One sentence.
 | `/no-brainer:summary` | Just present the executive summary — no Linear updates |
 | `/no-brainer:description` | Generate summary + update Linear issue description |
 | `/no-brainer:brief` | Full executive communication prep — reads Linear context, gives talking points |
+| `/no-brainer:walk-me-through` | Post a numbered step-by-step activity log as a Linear issue comment |
 | `/no-brainer:help` | Show help — what No-Brainer does and how to use it |
 
 ## Help (`/no-brainer:help`)
@@ -98,6 +99,7 @@ Context: [One paragraph max — links, prior decisions, constraints. Optional.]
 | `/no-brainer` or `/no-brainer:summary` | Present the executive summary only |
 | `/no-brainer:description` | Generate summary + update a Linear issue description with it |
 | `/no-brainer:brief` | Full executive communication prep — reads Linear context, gives talking points for presenting to leadership |
+| `/no-brainer:walk-me-through` | Post a numbered step-by-step activity log as a Linear issue comment — plain-language steps + technical context |
 
 #### When to use
 
@@ -108,6 +110,70 @@ Say "summarize this", "tldr", "break this down", "executive summary", or just pa
 - Not a detailed analysis tool — it distills, not expands
 - Not a project plan — it clarifies "what" and "why", not "how in 47 steps"
 - Not a meeting notes formatter — it extracts the core point, not a chronological recap
+
+## Walk-Me-Through (`/no-brainer:walk-me-through`)
+
+Generate a numbered step-by-step activity log and post it as a comment on a Linear issue. Designed for team visibility — anyone can follow what was done without drowning in implementation details.
+
+### Input
+
+The user provides:
+- A Linear issue ID/URL (required) — or issue IDs are passed from another skill (e.g., `/qgit`)
+- Context about what was done — from conversation history, git commits, or explicit description
+
+### The Format
+
+Each step has two parts:
+
+```markdown
+### n/total — [Plain-language meaning of what was done]
+
+**Technical Context:** [Implementation details — files changed, APIs used, key decisions. To the point.]
+```
+
+**Line 1 (the title):** What happened, in words anyone on the team can understand. No jargon. This is for PMs, designers, executives — anyone following the issue.
+
+**Line 2 (technical context):** Implementation specifics for engineers — file paths, function names, architectural decisions. Brief and reference-heavy, not prose.
+
+### Example Output
+
+```markdown
+## Activity Walk-Through
+
+### 1/4 — Added subscription duration column to the cancellation table
+
+**Technical Context:** New `subscription_days` column in `CancellationCommentsTable.tsx`. Computed from `subscription.startDate` via `daysSince()` utility in `src/utils/dates.ts`.
+
+### 2/4 — Added total notes count for each churned user
+
+**Technical Context:** Added `notesCount` field to the cancellation query in `src/services/posthog.ts`. Aggregates from `notes` table joined on `user_id`.
+
+### 3/4 — Styled new columns to match existing table layout
+
+**Technical Context:** Reused `MetricCell` component from `src/components/MetricCell.tsx`. No new CSS — followed existing column width pattern.
+
+### 4/4 — Updated dashboard filters to support sorting by new columns
+
+**Technical Context:** Extended `SortConfig` type in `src/types/dashboard.ts`. Added sort handlers in `useCancellationTable` hook.
+```
+
+### Process
+
+1. **Gather what was done.** Read conversation history, git log, diff — whatever is available. Understand the full scope of work.
+2. **Break into logical steps.** Each step = one meaningful unit of work. Not every file change — every *meaningful change*. Group related file changes into a single step.
+3. **Write the plain-language title first.** Ask: "Would a PM understand this in 5 seconds?" If not, simplify.
+4. **Add technical context.** Reference specific files, functions, components. Keep it to 1-2 sentences max. Engineers can click through to the code.
+5. **Number as `n/total`.** Total count goes in every step so readers know the full scope at a glance.
+6. **Post as a Linear comment** on the issue using `save_comment`.
+
+### Rules
+
+- Steps are ordered chronologically — the sequence tells a story
+- Total step count should be between 3-8 for most tasks. If you have 15 steps, you're too granular. Group related changes.
+- Plain-language titles must NOT use code terms (no `refactor`, `implement`, `initialize`). Say what the user/team gains.
+- Technical context references files with relative paths, not absolute
+- Never post without showing the user first for confirmation
+- If no Linear issue is provided, ask for one
 
 ## What This Skill is NOT
 
