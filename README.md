@@ -1,230 +1,319 @@
-# Kallavi Turk Skills
+# Investment Advisor Multi-Agent System
 
-**A comprehensive collection of skills for the Kallavi Turk agentic twin** — a Turkish digital twin capable of trading, investing, coding, and serving as your perfect digital assistant.
+A Python-based multi-agent system that generates periodic (every 72 hours) investment advisory reports using Google Gemini AI. The system features a dynamic portfolio tracker, historical report awareness for consistent long-term advice, and an interactive inference mode for ad-hoc questions.
 
-Imagine a Turkish digital twin who can analyze BIST stocks in real-time, manage your crypto portfolio with TL conversions, write Turkish business documents, execute complex trading strategies, and embody your personal decision-making style. This repository makes that vision a reality.
-
-## What Are Kallavi Turk Skills?
-
-Kallavi Turk Skills are **Agent Skills standard-compliant** skill modules that teach AI agents (Claude Code, OpenClaw, etc.) how to perform specific tasks. Each skill is a self-contained folder with clear instructions, examples, and supporting resources.
-
-This repository follows the **Anthropic Agent Skills open standard**, ensuring compatibility across:
-- **Claude Code** (local desktop app)
-- **OpenClaw / clawdbot** (primary platform)
-- **Claude.ai** (web interface)
-- **Claude API** (`/v1/skills` endpoint)
-
-Skills in this repository are designed specifically for a **Turkish digital twin**, incorporating:
-- Turkish language support (bilingual TR/EN)
-- Turkish market expertise (BIST, TL, Turkish economic indicators)
-- Turkish cultural context and business practices
-- Localized workflows for trading, investing, and daily routines
-
-## Repository Structure
+## System Architecture
 
 ```
-kallavi-turk-skills/
-├── README.md                          # This file - repository overview
-├── CONTRIBUTING.md                    # Contribution guidelines for humans
-├── LICENSE                            # MIT License
-├── create-kallavi-turk-skills/        # Meta-skill: teaches agents to create skills
-│   └── SKILL.md
-├── [future-skill-1]/                  # Your next skill here!
-│   ├── SKILL.md
-│   ├── scripts/                       # Optional: executable code
-│   ├── references/                    # Optional: detailed documentation
-│   └── assets/                        # Optional: templates, configs
-└── [future-skill-2]/                  # And more skills...
-    └── SKILL.md
+                          ┌──────────────────────┐
+                          │   Portfolio Manager   │
+                          │  (manage_portfolio.py)│
+                          └──────────┬───────────┘
+                                     │ reads portfolio
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              RESEARCH PHASE                                  │
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                      │
+│  │ 1A-1C        │  │ 2A-2C        │  │ 3A-3C        │                      │
+│  │ Gold & Silver│  │ Global Stocks│  │ Turkish Stock│                      │
+│  │ (3 agents)   │  │ (3 agents)   │  │ (3 agents)   │                      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                      │
+│         │                 │                 │                                │
+│         └─────────────────┼─────────────────┘                                │
+│                           ▼                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DISCUSSION PHASE (Single Iteration)                       │
+│                    + Dynamic Portfolio Context                               │
+│                    + YFinance Fundamental Data Pool                          │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────┐       │
+│  │                  Mixture of Experts (N Agents)                  │       │
+│  │     (Dynamically generated JSON investing styles / limits)      │       │
+│  └────────────────────────────────┬────────────────────────────────┘       │
+│           │                    │                    │                        │
+│           └────────────────────┼────────────────────┘                        │
+│                                ▼                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DECISION PHASE                                    │
+│                    + Dynamic Portfolio Context                                │
+│                    + Last 3 Decision Reports                                 │
+│                                                                              │
+│                    ┌───────────────────────┐                                │
+│                    │    Decider Agent      │                                │
+│                    │  (Self-Iterating)     │                                │
+│                    │  Thinking Model       │                                │
+│                    └───────────┬───────────┘                                │
+│                                │                                             │
+└────────────────────────────────┼────────────────────────────────────────────┘
+                                 │
+                                 ▼
+                         ┌───────────────┐
+                         │ Email Report  │
+                         │ (Gmail SMTP)  │
+                         └───────────────┘
 ```
 
-Each skill follows a consistent structure:
-- **Required**: `SKILL.md` with YAML frontmatter and instructions
-- **Optional**: `scripts/`, `references/`, `assets/` subdirectories
+## Features
 
-## Compatibility
+- **9 Research Agents** with Google Search grounding for real-time data
+- **3 Discussion Agents** with iterative refinement and dynamic portfolio awareness
+- **1 Decider Agent** with self-iteration, historical awareness (last 3 reports), and long-term consistency rules
+- **Dynamic Portfolio Management** -- interactive CLI to track assets, buy/sell, with full history
+- **Inference Mode** -- ask ad-hoc investment questions against historical reports + live web search
+- **Email Delivery** via Gmail SMTP
+- **72-Hour Run Cycle** -- configurable scheduled execution
+- **Configurable** iteration counts, model parameters, and portfolio settings
 
-✅ **Claude Code** — Local skill directory integration  
-✅ **OpenClaw (clawdbot)** — Primary target platform  
-✅ **Claude.ai** — Upload as custom instructions  
-✅ **Claude API** — Use via `/v1/skills` endpoint  
+## Setup
 
-All skills are tested to work across these platforms.
+### 1. Install Dependencies
 
-## Quick Start
+```bash
+pip install -r requirements.txt
+```
 
-### Using a Skill with Claude Code
+### 2. Configure Environment
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/its-meseba/kallavi-turk-skills.git
-   ```
+Create a `.env` file in the project root with:
 
-2. Copy the skill folder(s) you want to Claude Code's skill directory:
-   - **macOS**: `~/Library/Application Support/Claude/skills/`
-   - **Windows**: `%APPDATA%/Claude/skills/`
-   - **Linux**: `~/.config/Claude/skills/`
+```env
+# Google Gemini API Key
+# Get your key from: https://aistudio.google.com/apikey
+GEMINI_API_KEY=your-gemini-api-key-here
 
-3. Restart Claude Code
+# Gmail SMTP Configuration
+# For GMAIL_APP_PASSWORD, you need to:
+# 1. Enable 2-Factor Authentication on your Google Account
+# 2. Go to https://myaccount.google.com/apppasswords
+# 3. Generate an App Password for "Mail"
+GMAIL_ADDRESS=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-16-character-app-password
 
-4. Start using the skill by typing queries that match the skill's trigger phrases
+# Recipient Email Address
+RECIPIENT_EMAIL=recipient@email.com
+```
 
-### Using a Skill with OpenClaw
+### 3. Set Up Your Portfolio
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/its-meseba/kallavi-turk-skills.git
-   ```
+Because the `portfolio` folder is ignored by git to protect your privacy, you must create your initial portfolio structure.
+Create an initial portfolio for current holdings, and make a separate copy to represent the "advisory" hypothetical tracker.
 
-2. Configure OpenClaw to load the skill directory:
-   ```bash
-   openclaw --skills-dir /path/to/kallavi-turk-skills
-   ```
+```bash
+mkdir portfolio
+# Example setup (create your JSON representations):
+# cp template.json portfolio/current_portfolio.json
+# cp template.json portfolio/advisory_portfolio.json
+```
 
-3. Test the skill with relevant queries
+Or you can initialize it using the interactive tool:
 
-### Using a Skill with Claude.ai
+```bash
+python manage_portfolio.py
+```
 
-1. Navigate to the skill folder you want to use
-2. Copy the contents of `SKILL.md`
-3. In Claude.ai, paste the skill content as a custom instruction or system prompt
-4. Start your conversation
+This interactive tool lets you:
+- Add/remove assets
+- Record buy and sell actions
+- Update asset prices and exchange rates
+- View portfolio history
 
-## How to Create a New Skill
+All discussion and decider agents read the portfolio dynamically from these JSON files.
 
-There are two ways to create a new skill:
+### 4. Verify Prompt Files
 
-### Option 1: Let an AI Agent Do It (Recommended)
+Ensure all 14 prompt files exist in the `prompts/` directory:
 
-Use the **`create-kallavi-turk-skills`** meta-skill:
+- `1A - Gold & Silver News Agent.txt`
+- `1B - Gold & Silver Market & Fundamental Agent.txt`
+- `1C - Gold & Silver Social & Sentiment Agent.txt`
+- `2A - Global Stocks & Funds News Agent.txt`
+- `2B - Global Stocks & Funds Market & Fundamental Agent.txt`
+- `2C - Global Stocks & Funds Social & Sentiment Agent.txt`
+- `3A - Turkish Stocks & Funds News Agent.txt`
+- `3B - Turkish Stocks & Funds Market & Fundamental Agent.txt`
+- `3C - Turkish Stocks & Funds Social & Sentiment Agent.txt`
+- `Discussion Agent Template.txt`
+- `Decider Agent.txt`
+- `Inference Agent.txt`
 
-1. Add the `create-kallavi-turk-skills/` folder to your AI agent (Claude Code or OpenClaw)
-2. Ask: "Create a new skill for analyzing Turkish stocks" or "Help me build a kallavi skill for portfolio management"
-3. The agent will guide you through the entire skill creation process
+## Usage
 
-### Option 2: Create Manually
+### Run Full Pipeline
 
-Follow the guidelines in **[CONTRIBUTING.md](CONTRIBUTING.md)**:
+```bash
+python main.py
+```
 
-1. Fork this repository
-2. Create a new folder in kebab-case (e.g., `bist-stock-analyzer`)
-3. Add a `SKILL.md` file with proper YAML frontmatter and instructions
-4. Test your skill locally
-5. Submit a pull request
+### Custom Iterations
 
-## Skill Categories
+```bash
+# 5 discussion iterations, 4 decider self-iterations
+python main.py --discussion-iterations 5 --decider-iterations 4
+```
 
-Skills in this repository are organized into six main categories:
+### Skip Email
 
-### 🔄 Trading & Finance
-Real-time market analysis, technical indicators, BIST stocks, crypto trading, portfolio tracking, risk management
+```bash
+python main.py --skip-email
+```
 
-**Example skills** (coming soon):
-- `bist-stock-scanner` — Real-time BIST market analysis
-- `crypto-trading-bot` — Automated crypto trading with TL conversions
-- `portfolio-risk-analyzer` — Risk assessment and rebalancing
+### Run Individual Phases
 
-### 📊 Investment
-Fundamental analysis, Turkish economic indicators, real estate, gold/TL dynamics, long-term planning
+```bash
+# Research only
+python main.py --research-only
 
-**Example skills** (coming soon):
-- `turkish-real-estate-analyzer` — Turkish property investment analysis
-- `gold-investment-strategy` — Gold and commodity analysis for Turkish markets
-- `dividend-tracker` — Track dividends with Turkish tax considerations
+# Discussion only (requires existing research reports)
+python main.py --discussion-only
 
-### 💻 Coding & Development
-Code generation, review, Turkish dev conventions, API clients, database design
+# Decider only (requires existing research + discussion)
+python main.py --decider-only --iteration 3
+```
 
-**Example skills** (coming soon):
-- `turkish-api-client-generator` — Generate API clients for Turkish services
-- `code-review-assistant` — Code review with Turkish context
-- `database-schema-builder` — Database design and optimization
+### Portfolio Management
 
-### 🤖 Digital Twin / Personal
-Daily routines, communication style, decision-making frameworks, cultural behaviors
+```bash
+# Interactive portfolio manager
+python manage_portfolio.py
 
-**Example skills** (coming soon):
-- `morning-routine-optimizer` — Personalized morning workflow
-- `turkish-communication-style` — Embody Turkish communication patterns
-- `decision-framework` — Personal decision-making model
+# View current portfolio
+python manage_portfolio.py --view
 
-### 📝 Document & Asset Creation
-Reports, presentations, Turkish business documents, charts, social media content
+# View change history
+python manage_portfolio.py --history
+```
 
-**Example skills** (coming soon):
-- `turkish-business-letter-writer` — Generate official Turkish documents
-- `financial-report-generator` — Create financial reports and analyses
-- `chart-creator` — Data visualization and infographics
+### Inference Mode (Interactive Q&A)
 
-### ⚙️ Workflow Automation
-Multi-step processes, MCP integrations, scheduled tasks, cross-platform automation
+```bash
+# Start interactive session
+python inference.py
 
-**Example skills** (coming soon):
-- `morning-market-briefing` — Automated daily market summary
-- `portfolio-rebalancing-workflow` — Scheduled portfolio adjustments
-- `mcp-trading-integration` — MCP server integration for trading platforms
+# Ask a single question
+python inference.py --question "Should I sell my ASELS position?"
+```
 
-## Contributing
+### Scheduled Execution (72-Hour Cycle)
 
-We welcome contributions! Whether you want to add a new trading strategy, a Turkish market analysis tool, a coding workflow, or a personal routine, your contribution helps make Kallavi Turk more capable.
+The system is designed to provide fresh advice roughly every 72 hours.
+As a Claude Skill, you can instruct your agent (if the platform supports background tasks) to execute the system periodically.
+Example prompt to Claude:
+> "Run the `investor-skill` full analysis pipeline automatically every 72 hours."
 
-**Read the full contribution guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
+## Portfolio System
 
-**Quick contribution checklist**:
-- [ ] Skill folder is kebab-case
-- [ ] `SKILL.md` file exists with proper frontmatter
-- [ ] Description includes trigger phrases
-- [ ] Instructions are clear and actionable
-- [ ] Tested with at least 3 user queries
-- [ ] Turkish/bilingual support included (if applicable)
+The portfolio is stored as structured JSON and dynamically injected into all discussion and decider agent prompts at runtime.
 
-## Meta-Skill: Create Kallavi Turk Skills
+### Portfolio Structure
 
-New to skill creation? Start with the **`create-kallavi-turk-skills`** meta-skill:
+```
+portfolio/
+├── current_portfolio.json    # Current portfolio state
+├── changes_log.json          # Log of all buy/sell actions
+└── history/                  # Archived snapshots before each change
+    ├── portfolio_2026-02-10_143000.json
+    └── portfolio_2026-02-12_091500.json
+```
 
-📖 **[View the meta-skill](create-kallavi-turk-skills/SKILL.md)**
+### Portfolio JSON Format
 
-This skill teaches AI agents how to create new skills for this repository. Simply add it to your AI agent and ask it to create a skill — it will handle:
-- Determining the skill name and structure
-- Writing proper YAML frontmatter
-- Creating clear, actionable instructions
-- Adding examples and error handling
-- Running validation checks
+Each asset in `current_portfolio.json` contains:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Asset name (e.g., "HLAL Fund") |
+| `category` | Asset class: `stocks_funds`, `real_estate`, `gold_silver`, `cash` |
+| `pieces` | Number of units held |
+| `price_per_piece_tl` | Current price per unit in TRY |
+| `total_tl` | Total value in TRY (auto-calculated) |
+| `total_usd` | Total value in USD (auto-calculated) |
+| `percentage` | Percentage of total portfolio (auto-calculated) |
+
+Top-level fields include `total_portfolio_tl`, `total_portfolio_usd`, `exchange_rate_usd_try`, and `date`.
+
+## Configuration
+
+Edit `config.py` to customize:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `RESEARCH_MODEL` | `gemini-2.0-flash` | Model for research agents |
+| `DISCUSSION_MODEL` | `gemini-2.5-pro` | Model for discussion agents |
+| `DECIDER_MODEL` | `gemini-2.5-pro` | Model for decider agent |
+| `INFERENCE_MODEL` | `gemini-2.5-pro` | Model for inference agent |
+| `DISCUSSION_ITERATIONS` | `3` | Number of discussion rounds |
+| `DECIDER_SELF_ITERATIONS` | `3` | Number of decider self-reflection cycles |
+| `PAST_REPORTS_COUNT` | `3` | Number of past reports fed to decider for consistency |
+
+## Output Structure
+
+```
+reports/
+├── research/               # 9 research reports per cycle
+│   ├── REPORT_1A_News_2026-02-12.txt
+│   ├── REPORT_1B_Fundamental_2026-02-12.txt
+│   └── ...
+├── discussion/             # Discussion outputs by iteration
+│   ├── iteration_1/
+│   ├── iteration_2/
+│   └── iteration_3/
+└── final/                  # Final decision reports
+    ├── FINAL_Decision_2026-02-09.txt
+    ├── FINAL_Decision_2026-02-12.txt
+    └── ...                 # Last 3 are fed back to decider
+```
+
+## Decider Report Format
+
+The final advisory report contains the following sections:
+
+1. **Market Overview** -- concise environment summary
+2. **Key Suggestions** -- prioritized actionable recommendations (1-5 items)
+3. **Market Expectations** -- short-term (1-3 months) and medium-term (6-12 months) outlook
+4. **Candidate New Investments** -- (conditional) only present when new assets are suggested
+5. **Risk Alerts** -- high and medium risk warnings with recommended actions
+
+The decider is designed for long-term wealth building consistency. It references its past 3 reports and avoids flip-flopping advice without clear justification.
+
+## Models Used
+
+| Agent Type | Model | Features |
+|------------|-------|----------|
+| Research (9) | `gemini-2.0-flash` | Web search grounding |
+| Discussion (3) | `gemini-2.5-pro` | Strong reasoning, portfolio-aware |
+| Decider (1) | `gemini-2.5-pro` | Self-iterating, history-aware |
+| Inference (1) | `gemini-2.5-pro` | Web search + historical context |
+
+## Troubleshooting
+
+### API Key Issues
+- Ensure your Gemini API key is valid
+- Check you have sufficient quota
+
+### Email Issues
+- Verify 2FA is enabled on your Google account
+- Ensure you're using an App Password, not your regular password
+- Check the App Password is exactly 16 characters (no spaces)
+
+### Missing Reports
+- Run phases in order: research -> discussion -> decider
+- Check the `reports/` directory for generated files
+
+### Portfolio Not Loading
+- Ensure `portfolio/current_portfolio.json` exists and is valid JSON
+- Run `python manage_portfolio.py --view` to verify
 
 ## License
 
-This repository is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+This project is for personal use.
 
-You are free to use, modify, and distribute these skills for any purpose, including commercial use.
+## Disclaimer
 
-## About Kallavi Turk
-
-Kallavi Turk is an **agentic Turkish digital twin** — an AI-powered assistant that embodies Turkish market expertise, cultural knowledge, and personal decision-making capabilities. The twin can:
-
-- 📈 Trade and invest in Turkish and international markets
-- 💰 Analyze BIST stocks, crypto, gold, and TL dynamics
-- 💻 Code, review, and deploy software projects
-- 📄 Create Turkish business documents and reports
-- 🤖 Automate complex workflows and routines
-- 🇹🇷 Operate bilingually in Turkish and English
-
-This repository is the **skill library** that powers the twin's capabilities.
-
-## Support & Community
-
-- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/its-meseba/kallavi-turk-skills/issues)
-- **Discussions**: Ask questions and share ideas in [GitHub Discussions](https://github.com/its-meseba/kallavi-turk-skills/discussions)
-- **Pull Requests**: Contribute new skills via [Pull Requests](https://github.com/its-meseba/kallavi-turk-skills/pulls)
-
-## Useful Resources
-
-- 📚 [Anthropic Agent Skills Documentation](https://docs.anthropic.com/claude/docs/agent-skills)
-- 🛠️ [OpenClaw / clawdbot](https://github.com/clawdbot/openclaw)
-- 💼 [BIST (Istanbul Stock Exchange)](https://www.borsaistanbul.com/)
-- 🏦 [TCMB (Turkish Central Bank)](https://www.tcmb.gov.tr/)
-
----
-
-**Start building the future of Turkish agentic AI!** 🚀🇹🇷
-
-*Contributions welcome • MIT Licensed • Built with ❤️ for the Turkish AI community*
+This system generates investment-related information for educational purposes only. It does not constitute financial advice. Always consult with qualified financial professionals before making investment decisions.
