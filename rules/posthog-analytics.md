@@ -99,7 +99,7 @@ These events are currently tracked. When adding new features, follow this patter
 
 | Event | File | Properties |
 |-------|------|-----------|
-| `user_signed_in` | `app/auth.tsx` | `method` |
+| `user_signed_in` | `app/auth.tsx`, `app/email-auth.tsx` | `method` |
 | `habit_created` | `app/create-habit.tsx` | `habit_type`, `goal_type` |
 | `habit_edited` | `app/create-habit.tsx` | `habit_id`, `habit_type` |
 | `habit_toggled` | `contexts/habits/EntryContext.tsx` | `habit_id`, `date` |
@@ -107,6 +107,7 @@ These events are currently tracked. When adding new features, follow this patter
 | `paywall_viewed` | `components/premium/LiquidGlassPaywall.tsx` | `placement` |
 | `premium_purchased` | `components/premium/LiquidGlassPaywall.tsx` | `plan`, `placement`, `platform` |
 | `peer_habit_created` | `app/create-peer-habit.tsx` | `relationship_type`, `habit_type` |
+| `group_habit_created` | `app/create-group-habit.tsx` | `habit_type`, `group_type`, `goal_type`, `frequency` |
 | `group_habit_joined` | `app/join-group-habit/[code].tsx` | `group_id` |
 | `sign_out` | `app/settings.tsx` | — |
 | `onboarding_completed` | `screens/OnboardingScreen.tsx` | `skipped` |
