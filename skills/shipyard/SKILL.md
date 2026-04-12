@@ -145,6 +145,7 @@ Playwright MCP must be configured to use the user's existing Chrome profile:
 | `/shipyard:dashboard <service>` | Open and configure a dashboard via Playwright browser automation |
 | `/shipyard:status` | Health check of all SDK integrations in the current project |
 | `/shipyard:prices <territory>` | Set subscription pricing for a specific market |
+| `/shipyard:init-skills` | Auto-install all platform-appropriate Claude Code skills for the project |
 | `/shipyard:help` | Show all commands with examples |
 
 ---
@@ -290,6 +291,69 @@ Recommend and configure subscription prices for a specific market.
 4. Add localizations for the territory
 5. Report pricing table with savings percentages
 
+### `/shipyard:init-skills` — Auto-install platform skills
+
+Detects the project platform and installs all relevant Claude Code skills via `git clone` to `~/.claude-shared/skills/`.
+
+**Process:**
+
+1. **Detect platform** — scan project files (see Platform Detection above)
+2. **Resolve skill directory** — `SKILLS_DIR="$HOME/.claude-shared/skills"`
+3. **For each skill in the platform registry:**
+   a. Check if `$SKILLS_DIR/<skill-name>/SKILL.md` already exists → skip if present
+   b. `git clone <repo-url> $SKILLS_DIR/<skill-name>`
+   c. If SKILL.md is nested (e.g., `<skill-name>/<nested-dir>/SKILL.md`), flatten: `cp -r <nested-dir>/* .`
+   d. Verify `SKILL.md` exists at root level
+4. **Report:** installed count, skipped count, any failures
+
+**Platform Skill Registries:**
+
+#### iOS Skills
+| Skill Name | Repo | Purpose |
+|------------|------|---------|
+| swiftui-pro | `github.com/twostraws/SwiftUI-Agent-Skill` | Advanced SwiftUI patterns and best practices |
+| swiftdata-pro | `github.com/twostraws/SwiftData-Agent-Skill` | SwiftData persistence patterns |
+| swift-concurrency-pro | `github.com/twostraws/Swift-Concurrency-Agent-Skill` | Async/await and structured concurrency |
+| swift-testing-pro | `github.com/twostraws/Swift-Testing-Agent-Skill` | Swift Testing framework patterns |
+| swift-architecture | `github.com/efremidze/swift-architecture-skill` | Swift architecture patterns (MVVM, Clean, etc.) |
+| swift-security-expert | `github.com/ivan-magda/swift-security-skill` | iOS security best practices |
+| core-data-expert | `github.com/AvdLee/Core-Data-Agent-Skill` | Core Data patterns and migrations |
+| app-store-aso | `github.com/timbroddin/app-store-aso-skill` | App Store Optimization |
+
+**Note:** Skills already bundled in user config (swiftui-liquid-glass, swiftui-ui-patterns, swift-concurrency-expert, app-onboarding-questionnaire, shipyard, marketing-psychology, onboarding-cro) are NOT cloned — they are already available.
+
+**Example output:**
+```
+Skills installed for iOS project:
+✅ swiftui-pro — already installed, skipped
+✅ swiftdata-pro — installed
+✅ swift-concurrency-pro — installed
+✅ swift-testing-pro — installed
+✅ swift-architecture — already installed, skipped
+✅ swift-security-expert — installed
+✅ core-data-expert — installed
+✅ app-store-aso — installed
+
+6 installed, 2 skipped, 0 failed
+```
+
+#### Android Skills
+| Skill Name | Repo | Purpose |
+|------------|------|---------|
+| app-store-aso | `github.com/timbroddin/app-store-aso-skill` | Store listing optimization |
+
+_(Android skill registry will grow as community skills are published)_
+
+#### Flutter Skills
+_(Flutter skill registry will grow as community skills are published)_
+
+#### React Native (Expo) Skills
+_(React Native skill registry will grow as community skills are published)_
+
+**Auto-trigger:** When `/shipyard:init` completes SDK setup, it should suggest running `/shipyard:init-skills` to install platform skills.
+
+---
+
 ### `/shipyard:help` — Show all commands
 
 Display the full command reference with examples.
@@ -307,12 +371,12 @@ npm install -g adapty
 npm install -g firebase-tools
 brew install app-store-connect-cli  # provides `asc` binary
 
-# Skills (add to Claude Code)
-npx skills add ParthJadhav/ios-marketing-capture -g
-npx skills add superwall-ios-quickstart -g
-npx skills add superwall-flutter-quickstart -g
-npx skills add superwall-android-quickstart -g
-npx skills add superwall-expo-quickstart -g
+# Skills (clone to ~/.claude-shared/skills/)
+# Use /shipyard:init-skills to auto-install all platform skills
+# Manual install example:
+SKILLS_DIR="$HOME/.claude-shared/skills"
+git clone https://github.com/twostraws/SwiftUI-Agent-Skill.git "$SKILLS_DIR/swiftui-pro"
+# If SKILL.md is nested, flatten: cd "$SKILLS_DIR/swiftui-pro" && cp -r swiftui-pro/* . 2>/dev/null
 
 # MCP servers
 claude mcp add playwright -- npx @playwright/mcp@latest
@@ -374,6 +438,11 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 | `app-store-optimization` | ASO after app store connection |
 | `paywall-upgrade-cro` | Optimize paywall conversion after Adapty setup |
 | `app-onboarding-questionnaire` | Design and build questionnaire-style onboarding flows (Duolingo/Noom pattern) |
+| `swiftui-pro` | Advanced SwiftUI patterns — auto-installed by `/shipyard:init-skills` |
+| `swift-concurrency-pro` | Async/await and structured concurrency — auto-installed by `/shipyard:init-skills` |
+| `swift-testing-pro` | Swift Testing framework patterns — auto-installed by `/shipyard:init-skills` |
+| `swift-architecture` | Architecture patterns (MVVM, Clean, etc.) — auto-installed by `/shipyard:init-skills` |
+| `swift-security-expert` | iOS security best practices — auto-installed by `/shipyard:init-skills` |
 
 ## Rules
 
