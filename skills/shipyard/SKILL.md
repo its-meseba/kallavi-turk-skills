@@ -309,7 +309,25 @@ Detects the project platform and installs all relevant Claude Code skills via `g
    - **Skill Reference**: Use `<skill-name>` skill for <purpose>
    ```
    Only add references for skills relevant to the detected platform. Do NOT duplicate references that already exist in the file.
-5. **Report:** installed count, skipped count, any failures, CLAUDE.md references added
+5. **Create `ai-rules/` folder** — if it doesn't exist, create `ai-rules/` in the project root with domain-specific rule files tailored to the detected platform. This follows the Zabłocki progressive-disclosure pattern: a `rule-loading.md` index tells the LLM which rules to load on demand.
+
+   **For iOS projects, create these files:**
+   - `ai-rules/rule-loading.md` — index of all rule files with loading triggers and keywords
+   - `ai-rules/general.md` — core Swift engineering rules (always loaded): progressive architecture, error handling, dependency injection, localization, quality gates, anti-patterns
+   - `ai-rules/view.md` — SwiftUI view rules: Liquid Glass API patterns, modifier order, design system tokens, animation patterns (staggered reveal, celebration, content transitions), reusable components list
+   - `ai-rules/view-model.md` — ViewModel rules: @Observable pattern, computed derived state, async data loading, String(localized:), state ownership
+   - `ai-rules/services.md` — services/SDK rules: AnalyticsRouter pattern, graceful SDK fallbacks, revenue event formatting, HealthKit/FamilyControls patterns
+   - `ai-rules/testing.md` — testing rules: test behavior not implementation, mock dependency injection, focus areas, test structure
+
+   Each rule file uses the `<primary_directive>`, `<rule_N priority="...">`, `<pattern name="...">`, `<checklist>`, and `<avoid>` XML-like tag structure for optimal LLM parsing.
+
+   **Skip if `ai-rules/` already exists** — don't overwrite existing rule files.
+
+6. **Update project CLAUDE.md** — two additions:
+   a. Add a **Rule Index** section near the top pointing to `@ai-rules/rule-loading.md`
+   b. Add `Skill Reference` lines for every installed skill not already listed
+   Only add references for skills relevant to the detected platform. Do NOT duplicate.
+7. **Report:** installed count, skipped count, any failures, CLAUDE.md references added, ai-rules created (yes/no)
 
 **CLAUDE.md Skill Reference Templates (by platform):**
 
