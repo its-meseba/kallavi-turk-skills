@@ -304,7 +304,37 @@ Detects the project platform and installs all relevant Claude Code skills via `g
    b. `git clone <repo-url> $SKILLS_DIR/<skill-name>`
    c. If SKILL.md is nested (e.g., `<skill-name>/<nested-dir>/SKILL.md`), flatten: `cp -r <nested-dir>/* .`
    d. Verify `SKILL.md` exists at root level
-4. **Report:** installed count, skipped count, any failures
+4. **Update project CLAUDE.md** — read the project's `CLAUDE.md`, find the platform rules section, and add `Skill Reference` lines for every installed skill that isn't already listed. Each line follows the format:
+   ```
+   - **Skill Reference**: Use `<skill-name>` skill for <purpose>
+   ```
+   Only add references for skills relevant to the detected platform. Do NOT duplicate references that already exist in the file.
+5. **Report:** installed count, skipped count, any failures, CLAUDE.md references added
+
+**CLAUDE.md Skill Reference Templates (by platform):**
+
+#### iOS Skill References
+```markdown
+- **Skill Reference**: Use `swiftui-liquid-glass` skill for Liquid Glass implementation patterns
+- **Skill Reference**: Use `swiftui-ui-patterns` skill for SwiftUI best practices
+- **Skill Reference**: Use `swift-concurrency-expert` skill for async/await patterns
+- **Skill Reference**: Use `swiftui-pro` skill for advanced SwiftUI patterns and component design
+- **Skill Reference**: Use `swift-concurrency-pro` skill for structured concurrency and actor patterns
+- **Skill Reference**: Use `swift-architecture` skill for MVVM, Clean Architecture, and design patterns
+- **Skill Reference**: Use `swift-security-expert` skill for iOS security best practices (keychain, encryption, ATT)
+- **Skill Reference**: Use `swift-testing-pro` skill for Swift Testing framework patterns
+- **Skill Reference**: Use `swiftdata-pro` skill for SwiftData persistence patterns
+- **Skill Reference**: Use `core-data-expert` skill for Core Data patterns (if needed alongside SwiftData)
+- **Skill Reference**: Use `app-store-aso` skill for App Store Optimization
+- **Skill Reference**: Use `shipyard` skill for SDK integration, CLI orchestration, and app store operations
+```
+
+#### Android Skill References
+```markdown
+- **Skill Reference**: Use `mobile-android-design` skill for Material 3 patterns
+- **Skill Reference**: Use `app-store-aso` skill for Play Store listing optimization
+- **Skill Reference**: Use `shipyard` skill for SDK integration, CLI orchestration, and app store operations
+```
 
 **Platform Skill Registries:**
 
