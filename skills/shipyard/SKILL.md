@@ -482,6 +482,7 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 | `qgit` | After setup — commit and push changes |
 | `ios-marketing-capture` | Capture raw in-app screenshots from simulator |
 | `app-store-screenshots` | Generate marketing advertisement slides (Next.js) — headlines, mockup frames, multi-locale, export at all Apple sizes |
+| `app-store-screenshots-2` | AI-driven screenshot generation — analyzes codebase to discover features, generates copy, builds slides |
 | `superwall-*-quickstart` | Platform-specific Superwall setup |
 | `analytics-tracking` | Plan analytics event taxonomy |
 | `app-store-optimization` | ASO after app store connection |
@@ -492,6 +493,49 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 | `swift-testing-pro` | Swift Testing framework patterns — auto-installed by `/shipyard:init-skills` |
 | `swift-architecture` | Architecture patterns (MVVM, Clean, etc.) — auto-installed by `/shipyard:init-skills` |
 | `swift-security-expert` | iOS security best practices — auto-installed by `/shipyard:init-skills` |
+
+## Figma Integration
+
+Upload screenshots and assets to Figma for design review and App Store submission prep.
+
+### Priority order
+1. **Figma MCP** (best) — if `mcp__claude_ai_Figma__*` tools are available, use them directly to create frames, upload images, and organize pages
+2. **Figma REST API** (limited) — can upload images as fills and read file structure, but CANNOT create nodes or place images on canvas
+3. **Manual import** (fallback) — instruct user to use Cmd+Shift+K (Place Image) in Figma
+
+### Figma REST API usage
+```python
+import urllib.request, json
+
+# Get file structure
+req = urllib.request.Request(
+    f"https://api.figma.com/v1/files/{FILE_KEY}?depth=1",
+    headers={"X-Figma-Token": FIGMA_TOKEN}
+)
+data = json.loads(urllib.request.urlopen(req).read())
+```
+
+### Token resolution
+- Check env var `FIGMA_PERSONAL_TOKEN` first
+- If not set, ask the user for their Figma Personal Access Token
+- NEVER hardcode or store tokens in files
+- Remind user to rotate token after use if shared in conversation
+
+### When to use
+- After `/shipyard:connect appstore` — upload subscription screenshots for review
+- After `app-store-screenshots` export — upload marketing slides to Figma for approval
+- After `ios-marketing-capture` — upload raw simulator screenshots for design iteration
+
+## App Store Screenshot Skills
+
+Two screenshot generator skills are available. Choose based on your needs:
+
+| Skill | Approach | Best for |
+|-------|----------|----------|
+| `app-store-screenshots` | Next.js project, manual copy input, pixel-perfect control | When you have specific copy and know exactly what each slide should look like |
+| `app-store-screenshots-2` | AI-driven, analyzes codebase for features, generates copy automatically | Quick-start when you want AI to figure out what to highlight |
+
+Both support multi-locale, export at all Apple required sizes, and iPhone mockup frames.
 
 ## Rules
 
