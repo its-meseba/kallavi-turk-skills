@@ -147,6 +147,8 @@ Playwright MCP must be configured to use the user's existing Chrome profile:
 | `/shipyard:status` | Health check of all SDK integrations in the current project |
 | `/shipyard:prices <territory>` | Set subscription pricing for a specific market |
 | `/shipyard:init-skills` | Auto-install all platform-appropriate Claude Code skills for the project |
+| `/shipyard:learn-lessons` | Analyze current project end-to-end and extract lessons — writes `docs/LESSONS-LEARNED.md` + promotes generalizable lessons to `~/.claude-shared/shipyard-lessons/` |
+| `/shipyard:update-learned-lessons` | Scan current project against every applicable lesson in the shared library, report gaps, offer to apply fixes (platform-aware) |
 | `/shipyard:help` | Show all commands with examples |
 
 ---
@@ -611,6 +613,68 @@ _(Flutter skill registry will grow as community skills are published)_
 _(React Native skill registry will grow as community skills are published)_
 
 **Auto-trigger:** When `/shipyard:init` completes SDK setup, it should suggest running `/shipyard:init-skills` to install platform skills.
+
+---
+
+### `/shipyard:learn-lessons` — Extract lessons from the current project
+
+Analyze the current project end-to-end (git history, plans, architecture, SDK integrations, localization, extensions) and capture what was learned. Produces a project-local retrospective document and promotes generalizable lessons to the shared library at `~/.claude-shared/shipyard-lessons/`.
+
+**Process:**
+
+1. **Detect platform** — same signals as `/shipyard:init` (iOS, Android, Flutter, RN Expo)
+2. **Gather project intelligence** — `git log`, plans folder, architecture docs, SDK fingerprints, localization surface, extension targets, memory records
+3. **Extract lessons across 10 dimensions** — architecture, platform, SDK, process, product, localization, performance, security, deployment, design — asking "what pattern worked?" and "what mistake did we make?" for each
+4. **Classify each lesson** — polarity (`require` / `avoid`), severity (critical / high / medium / low), scope (project-specific vs generalizable)
+5. **Write `docs/LESSONS-LEARNED.md`** — systematic table format (summary table, category tables, metrics snapshot, top takeaways)
+6. **Promote generalizable lessons** — create `lessons/L-XXX-NNN-*.md` files in `~/.claude-shared/shipyard-lessons/lessons/` with full frontmatter, Detect shell block, Fix steps, worked examples
+7. **Dedupe** — before creating a new lesson, scan existing ones; if substantially the same, update `last_verified` and add to `## Also observed in` instead
+8. **Update `INDEX.md`** — append new rows, keep sorted by ID, update totals and source-projects table
+9. **Commit** — `docs: learned-lessons for <project>` and `docs(shipyard-lessons): add L-XXX-NNN from <project>`
+
+**Output:** Compact summary showing the project-local doc path, new library IDs, reinforced existing IDs, top 3 takeaways.
+
+**When to use:** At any project milestone, after shipping a major feature, or as a retrospective. Every project you ship should make the next one easier.
+
+**Library conventions:**
+- ID scheme: `L-IOS-NNN` (iOS), `L-AND-NNN` (Android), `L-FLU-NNN` (Flutter), `L-RNE-NNN` (RN/Expo), `L-CRS-NNN` (cross-platform), `L-PRC-NNN` (process). IDs never reused.
+- Filenames: kebab-case, imperative (`register-extension-bundle-ids-early.md`)
+- Every lesson must cite a commit hash, file path, or memory record — never invented
+
+### `/shipyard:update-learned-lessons` — Apply the lessons library to this project
+
+Scan the current project against every applicable lesson in `~/.claude-shared/shipyard-lessons/` and apply the fixes where gaps are detected. Platform-aware — only runs lessons tagged for the detected platform plus cross-platform and process lessons.
+
+**Process:**
+
+1. **Detect platform** — same logic as `/shipyard:learn-lessons`
+2. **Load applicable lessons** — read `INDEX.md`, filter by matching `platforms:` frontmatter (plus `all`/`cross-platform` and all `L-PRC-*`)
+3. **Run each Detect check** — either the `# detect:` shell block (exit 0 = pattern PRESENT) or a manual checklist
+4. **Classify each lesson:**
+   - ✅ applied — require polarity + pattern present, OR avoid polarity + mistake absent
+   - ⚠️ gap — require polarity + pattern absent, OR avoid polarity + mistake present
+   - ❓ indeterminate — manual checklist, script errored, or Detect inconclusive
+   - ➖ not applicable — `applies_when` precondition not satisfied
+5. **Present gap report** — grouped by severity (CRITICAL + HIGH shown by default; `--all` for MEDIUM/LOW)
+6. **Offer to apply fixes** — batch mode or per-lesson y/N confirmation; automated where a `# fix:` shell block exists, manual-guided otherwise
+7. **Re-verify after each fix** — re-run Detect; if still failing, flag for human review
+8. **Update `docs/LESSONS-LEARNED.md`** — append to `## Update log` with applied/deferred IDs
+9. **Commit** — `chore: apply shipyard lessons L-XXX-NNN, L-YYY-NNN`
+
+**Flags:**
+- `--all` — include MEDIUM and LOW severity in the report (default: critical + high only)
+- `--dry-run` — detect and report only, never apply
+- `--only <id>` — run a single lesson by ID
+- `--category <name>` — filter by category (sdk, architecture, process, …)
+- `--auto` — apply CRITICAL + HIGH automated fixes without per-lesson confirmation (use with caution)
+
+**Safety rules:**
+- Platform filter is mandatory — never run an Android-tagged lesson on an iOS project
+- Never apply a fix whose Detect verification still fails afterward — flag instead
+- Never modify library lessons from this command — that's `/shipyard:learn-lessons`'s job
+- Fixes touching `.github/`, `Fastfile`, or `settings.json` should be proposed via PR, not applied directly
+
+**When to use:** After `/shipyard:init` on a new project (proactive gap check), when picking up a project after a pause, or before a release cut to catch regressions against known good patterns.
 
 ---
 
