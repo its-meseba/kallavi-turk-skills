@@ -42,7 +42,7 @@ Adapt ALL SDK integration patterns to the detected platform:
 | Meta/Facebook | Attribution, ad events, deep links | — | — | — |
 | AppsFlyer | Install attribution, deep links | — | — | — |
 | Superwall | Paywall experimentation (optional) | `superwall` | — | `npx skills add superwall-ios-quickstart` |
-| App Store Connect | App management, subscriptions, TestFlight | `asc` (brew) | — | `npx skills add ios-marketing-capture` |
+| App Store Connect | App management, subscriptions, TestFlight, metadata + screenshot sync | `asc` (brew) + custom Python client for full REST API | — | `npx skills add ios-marketing-capture` |
 | Google Play Console | Android app management | — | — | — |
 
 ## Architecture Pattern
@@ -142,6 +142,7 @@ Playwright MCP must be configured to use the user's existing Chrome profile:
 | `/shipyard:abilities` | Audit installed CLIs, MCPs, skills — show ready vs missing |
 | `/shipyard:setup <sdk>` | Deep setup for one SDK (posthog, adapty, firebase, meta, appsflyer, superwall) |
 | `/shipyard:connect <store>` | Connect app stores — subscriptions, pricing, localizations, webhooks |
+| `/shipyard:asc-sync` | Push metadata + screenshots to App Store Connect for all locales (one command) |
 | `/shipyard:dashboard <service>` | Open and configure a dashboard via Playwright browser automation |
 | `/shipyard:status` | Health check of all SDK integrations in the current project |
 | `/shipyard:prices <territory>` | Set subscription pricing for a specific market |
@@ -241,13 +242,78 @@ Set up app store integrations. Available: `appstore`, `playstore`.
 
 **Example: `/shipyard:connect appstore`**
 
-1. Authenticate `asc` CLI if not already
-2. Create subscription group
-3. Create subscription products with localized pricing
-4. Add localizations (detect from project — e.g., TR + EN)
-5. Set App Store server notification URL (for Adapty/RevenueCat webhook)
-6. Configure sandbox testers
-7. Upload review screenshots if available
+Reality check: the community `asc` CLI covers TestFlight and some subscription ops, but **NOT** full metadata or screenshot sync. For the "ship v1.0" workflow below, use the App Store Connect REST API via a Python client (see the **App Store Connect REST API** section later).
+
+**Full v1.0 release prep workflow:**
+
+1. **Auth setup (one-time per project)**
+   - Create API key at https://appstoreconnect.apple.com/access/integrations/api with **Admin** or **App Manager** role
+   - Download `.p8` ONCE (Apple never shows it again)
+   - Place at `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8` (chmod 600)
+   - Export in `~/.zshrc`: `APP_STORE_API_KEY`, `APP_STORE_API_ISSUER`
+
+2. **Subscriptions (if monetized)**
+   - Create subscription group via `asc` CLI or Playwright
+   - Create subscription products with localized pricing
+   - Set App Store server notification URL (for Adapty/RevenueCat webhook)
+   - Configure sandbox testers
+
+3. **Metadata sync (use `/shipyard:asc-sync`)** — see next section. Covers:
+   - App info: name, subtitle, privacy URL, primary category per locale
+   - Version: description, keywords, promotional text, release notes, marketing URL, support URL per locale
+   - Version-level: copyright, release type
+   - Review contact + notes
+   - Screenshots per locale per device class
+
+4. **Localization matrix**
+   - Default locale = primary (e.g., `tr` for a Turkish-first app)
+   - Add secondary locales (`en-US`, `ru`, etc.) even if app UI is single-language — App Store listings can still be multi-locale
+   - Turkish diacritics must be correct: `Müslüman` not `Musluman`, `ÖZELLİKLER` not `OZELLIKLER`
+
+### `/shipyard:asc-sync` — Push metadata + screenshots to App Store Connect
+
+One-command sync for app listing: metadata for all locales + screenshots per locale + review info + category. Idempotent — safe to re-run.
+
+**Prereq structure in project:**
+```
+marketing/
+├── asc-metadata/
+│   ├── shared.json                   # URLs, copyright, review contact, review notes, primary_category, release_type
+│   ├── <locale>/
+│   │   ├── name.txt                  # ≤30 chars (App Store limit)
+│   │   ├── subtitle.txt              # ≤30 chars
+│   │   ├── description.txt           # ≤4000 chars
+│   │   ├── keywords.txt              # ≤100 chars, comma-separated, no spaces after commas
+│   │   ├── promotional_text.txt      # ≤170 chars, editable anytime
+│   │   └── release_notes.txt         # ≤4000 chars (ignored on first version)
+└── asc-screenshots/
+    └── <locale>/
+        ├── iphone-6-9/*.png          # APP_IPHONE_67: 1290×2796 (or APP_IPHONE_69: 1320×2868)
+        ├── iphone-6-5/*.png          # APP_IPHONE_65: 1242×2688
+        └── ipad-12-9/*.png           # APP_IPAD_PRO_129: 2048×2732
+```
+
+**Execution order (the sync script does this):**
+
+1. `GET /apps?filter[bundleId]=<bundle>` → resolve `app_id`
+2. `GET /apps/<app_id>/appStoreVersions?filter[appStoreState]=PREPARE_FOR_SUBMISSION,...` → `version_id`
+3. `GET /apps/<app_id>/appInfos` → pick editable → `app_info_id`
+4. `PATCH /appInfos/<app_info_id>` — primaryCategory relationship (e.g., `LIFESTYLE`, `HEALTH_AND_FITNESS`)
+5. `PATCH /appStoreVersions/<version_id>` — copyright, releaseType (`MANUAL` / `AFTER_APPROVAL` / `SCHEDULED`)
+6. `PATCH` or `POST /appStoreReviewDetails` — contact name/phone/email + review notes
+7. For each locale:
+   - Upsert `appInfoLocalization` (name, subtitle, privacyPolicyUrl)
+   - Upsert `appStoreVersionLocalization` (description, keywords, promotionalText, marketingUrl, supportUrl)
+   - Try `PATCH whatsNew` separately — **catch `STATE_ERROR`** (first-version releases reject whatsNew)
+   - Upsert `appScreenshotSet` per display type
+   - Delete existing screenshots in set (clean slate per sync)
+   - Upload new screenshots via 3-phase handshake (reservation → binary PUT → commit with MD5)
+
+**Idempotency patterns (must implement in the sync script):**
+- If `POST` returns `409 DUPLICATE`: refetch and `PATCH` instead
+- If `PATCH` of `whatsNew` returns `409 STATE_ERROR`: skip silently on first-release versions
+- If screenshot set doesn't exist: `POST`, otherwise reuse existing set ID
+- Always wipe existing screenshots before upload to avoid stale mixed state
 
 ### `/shipyard:dashboard <service>` — Open and configure a dashboard
 
@@ -312,14 +378,160 @@ Detects the project platform and installs all relevant Claude Code skills via `g
 5. **Create `ai-rules/` folder** — if it doesn't exist, create `ai-rules/` in the project root with domain-specific rule files tailored to the detected platform. This follows the Zabłocki progressive-disclosure pattern: a `rule-loading.md` index tells the LLM which rules to load on demand.
 
    **For iOS projects, create these files:**
-   - `ai-rules/rule-loading.md` — index of all rule files with loading triggers and keywords
+   - `ai-rules/rule-loading.md` — index of all rule files with loading triggers and keywords (MUST list `app-store.md` with triggers: "submit", "release", "screenshot", "metadata", "ASC", "App Store Connect", "localization", "review notes")
    - `ai-rules/general.md` — core Swift engineering rules (always loaded): progressive architecture, error handling, dependency injection, localization, quality gates, anti-patterns
    - `ai-rules/view.md` — SwiftUI view rules: Liquid Glass API patterns, modifier order, design system tokens, animation patterns (staggered reveal, celebration, content transitions), reusable components list
    - `ai-rules/view-model.md` — ViewModel rules: @Observable pattern, computed derived state, async data loading, String(localized:), state ownership
    - `ai-rules/services.md` — services/SDK rules: AnalyticsRouter pattern, graceful SDK fallbacks, revenue event formatting, HealthKit/FamilyControls patterns
    - `ai-rules/testing.md` — testing rules: test behavior not implementation, mock dependency injection, focus areas, test structure
+   - `ai-rules/app-store.md` — App Store Connect submission readiness: metadata file layout, locale matrix, character limits, Turkish/diacritic correctness, screenshot specs, review info, idempotent sync patterns (see template below)
+
+   **`rule-loading.md` trigger block for `app-store.md` (add to the trigger index):**
+
+   ```
+   ### app-store.md - App Store Connect Submission Readiness
+   **Load when:**
+   - Preparing for App Store submission or TestFlight release
+   - Running `/shipyard:asc-sync`
+   - Editing files under `marketing/asc-metadata/` or `marketing/asc-screenshots/`
+   - Adding a new locale to the App Store listing
+   - Reviewing/fixing screenshot sizes, character limits, or review info
+   - Debugging ASC API 401/409 errors
+
+   **Keywords:** App Store, ASC, asc-sync, submission, metadata, screenshot, localization, keywords, description, review notes, TestFlight, promotional text, release notes, locale, Turkish diacritics
+   ```
 
    Each rule file uses the `<primary_directive>`, `<rule_N priority="...">`, `<pattern name="...">`, `<checklist>`, and `<avoid>` XML-like tag structure for optimal LLM parsing.
+
+   **`ai-rules/app-store.md` template contents (copy into the file):**
+
+   ```markdown
+   <primary_directive>
+   Before invoking `/shipyard:asc-sync` or submitting to App Store Connect, the project MUST have complete, validated metadata for every locale and screenshots at the correct display-type resolutions. Broken submissions are expensive: rejections delay releases by days.
+   </primary_directive>
+
+   <rule_1 priority="critical">
+   **Metadata file layout is fixed.** The sync script expects exactly this structure. Do not invent new paths.
+
+   ```
+   marketing/
+   ├── asc-metadata/
+   │   ├── shared.json          (urls, copyright, review_contact, review_notes, primary_category, release_type)
+   │   └── <locale>/            (e.g. tr, en-US, ru, ar)
+   │       ├── name.txt             ≤30 chars
+   │       ├── subtitle.txt         ≤30 chars
+   │       ├── description.txt      ≤4000 chars
+   │       ├── keywords.txt         ≤100 chars, comma-separated, NO space after comma
+   │       ├── promotional_text.txt ≤170 chars (editable post-release)
+   │       └── release_notes.txt    ≤4000 chars (ignored on v1.0)
+   └── asc-screenshots/<locale>/<display-slug>/*.png
+   ```
+   </rule_1>
+
+   <rule_2 priority="critical">
+   **Character limits are enforced by Apple, not by the sync script.** The script just uploads — Apple rejects at submission time. Validate locally before running sync:
+   - name ≤ 30, subtitle ≤ 30
+   - keywords ≤ 100 total chars (including commas)
+   - promotional_text ≤ 170
+   - description ≤ 4000
+   </rule_2>
+
+   <rule_3 priority="critical">
+   **Turkish and non-ASCII diacritics must be correct.** Common mojibake from copy-paste:
+   - ✅ Müslüman, günlük, ÖZELLİKLER, İmsak, Öğle, Akşam
+   - ❌ Musluman, gunluk, OZELLIKLER, Imsak, Ogle, Aksam
+
+   Run a grep for ASCII-only variants of Turkish words before every sync. Same discipline for Arabic (`ar`), Russian (`ru`), German (`de`).
+   </rule_3>
+
+   <rule_4 priority="high">
+   **Locales are independent of in-app language.** A Turkish-only app can (and should) have en-US and ru App Store listings. The listing text drives discovery; the app can be single-language.
+   </rule_4>
+
+   <rule_5 priority="high">
+   **Screenshots must match display-type specs exactly.** Apple rejects with cryptic errors on off-by-one resolutions:
+
+   | Slug | Resolution | Maps to |
+   |---|---|---|
+   | `iphone-6-9` | 1290×2796 | `APP_IPHONE_67` (covers 6.7"+6.9" in practice) |
+   | `iphone-6-5` | 1242×2688 | `APP_IPHONE_65` |
+   | `ipad-12-9` | 2048×2732 | `APP_IPAD_PRO_129` |
+
+   If source captures are 1206×2622 (iPhone 17 Pro native), upscale to 1290×2796 with aspect-preserving black letterbox padding. Never stretch.
+
+   3–10 screenshots per set. Same 10 images can be reused across locales when the UI is single-language.
+   </rule_5>
+
+   <rule_6 priority="high">
+   **Review info is required before first submission.**
+   - `shared.json.review_contact` — full name, phone with country code, email that Apple reviewers can actually reach
+   - `shared.json.review_notes` — if the app needs a test account, include login credentials here. If it uses HealthKit/FamilyControls/special entitlements, document the permission flow
+   - Missing review info = instant rejection with "Guideline 2.1"
+   </rule_6>
+
+   <rule_7 priority="medium">
+   **Release notes (`whatsNew`) are NOT editable on v1.0.** Apple's logic: there's nothing "new" about a first release. The sync script catches `409 STATE_ERROR` and skips silently. For v1.0 builds, leave `release_notes.txt` empty or don't create it — avoid churn.
+   </rule_7>
+
+   <rule_8 priority="medium">
+   **Primary category matters for discoverability.** Use the closest Apple category. Examples:
+   - Prayer/religion apps → `LIFESTYLE`
+   - Habit/health trackers → `HEALTH_AND_FITNESS`
+   - Productivity/todo → `PRODUCTIVITY`
+
+   Secondary category is set in ASC UI, not the sync script (REST limitation).
+   </rule_8>
+
+   <rule_9 priority="medium">
+   **Release type decides when users get the update.**
+   - `MANUAL` — release when I click the button (safest for risky changes)
+   - `AFTER_APPROVAL` — release immediately after review passes
+   - `SCHEDULED` — release at a specific date/time (requires `scheduledReleaseDate`)
+
+   Set in `shared.json.release_type`.
+   </rule_9>
+
+   <pattern name="Pre-sync validation checklist">
+   Run this BEFORE `/shipyard:asc-sync`:
+   - [ ] All locale folders present with all 6 .txt files
+   - [ ] Character counts under limits (`wc -m marketing/asc-metadata/*/*.txt`)
+   - [ ] Turkish diacritics verified (grep for `Musluman`, `gunluk`, `OZELLIKLER` → should return nothing)
+   - [ ] Keywords have no trailing spaces after commas (grep for `, ` in keywords.txt → should return nothing)
+   - [ ] Screenshots resized to exact display-type resolution (imagemagick `identify` to verify)
+   - [ ] `shared.json` has valid review_contact (reachable phone + email)
+   - [ ] `APP_STORE_API_KEY` + `APP_STORE_API_ISSUER` env vars set
+   - [ ] `.p8` file exists at `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8`
+   - [ ] Key role is **Admin** or **App Manager** (not Developer)
+   </pattern>
+
+   <pattern name="Idempotent re-runs">
+   The sync is designed to be safe to re-run. Know what it does:
+   - `POST` returns `409 DUPLICATE` → script falls back to GET + PATCH
+   - `PATCH whatsNew` returns `409 STATE_ERROR` → script skips silently (v1.0)
+   - Screenshot sets: existing set is reused, its contents are wiped and re-uploaded each run
+   - Stale sets from old display types (e.g. leftover `APP_IPHONE_61`) must be cleaned manually — they cause "mixed sizes" warnings in ASC UI
+   </pattern>
+
+   <checklist>
+   When adding a new locale:
+   - [ ] Create `marketing/asc-metadata/<new-locale>/` with all 6 files
+   - [ ] Create `marketing/asc-screenshots/<new-locale>/iphone-6-9/` (reuse primary-locale PNGs if UI is single-language)
+   - [ ] Validate character limits and diacritics
+   - [ ] Add locale to the sync script's locale list (if it has a hardcoded list)
+   - [ ] Dry-run: `python3 Scripts/asc-sync.py --dry-run --locales <new-locale>`
+   - [ ] Live run: `python3 Scripts/asc-sync.py --locales <new-locale>`
+   - [ ] Verify in ASC UI that listing appears correctly
+   </checklist>
+
+   <avoid>
+   - Hardcoding English copy for non-English locales ("en-US fallback" is lazy and tanks conversion)
+   - Committing raw screenshots to git (binary bloat) — commit only the text metadata; screenshots are regenerated by capture scripts
+   - Editing listing copy in the ASC web UI after the first sync (changes get overwritten on next sync — edit the `.txt` files instead)
+   - Re-running sync without validating character counts — Apple may accept upload and reject at submission
+   - Using `APP_IPHONE_61` (6.1") as the primary set — Apple now derives smaller displays from `APP_IPHONE_67`
+   - Storing `.p8` files inside the repo — keychain or `~/.appstoreconnect/` only, chmod 600
+   </avoid>
+   ```
 
    **Skip if `ai-rules/` already exists** — don't overwrite existing rule files.
 
@@ -496,12 +708,20 @@ BUNDLE_ID=$(grep "PRODUCT_BUNDLE_IDENTIFIER" project.yml | head -1 | awk '{print
 
 ## Figma Integration
 
-Upload screenshots and assets to Figma for design review and App Store submission prep.
+Organize screenshots and assets in Figma for design review and App Store submission prep.
 
-### Priority order
-1. **Figma MCP** (best) — if `mcp__claude_ai_Figma__*` tools are available, use them directly to create frames, upload images, and organize pages
-2. **Figma REST API** (limited) — can upload images as fills and read file structure, but CANNOT create nodes or place images on canvas
-3. **Manual import** (fallback) — instruct user to use Cmd+Shift+K (Place Image) in Figma
+### What Figma REST API CAN do
+- **Read** file structure, pages, nodes, styles, components
+- **Export** existing nodes as PNG/SVG/PDF
+- **Update** image fills on existing nodes (replace, not create)
+- **Post** comments on frames
+- **Read** component/style metadata
+
+### What Figma REST API CANNOT do
+- Create new nodes (frames, rectangles, text) on canvas
+- Place/position images on a page
+- Create new pages
+- Arrange layouts or set auto-layout properties
 
 ### Figma REST API usage
 ```python
@@ -513,7 +733,24 @@ req = urllib.request.Request(
     headers={"X-Figma-Token": FIGMA_TOKEN}
 )
 data = json.loads(urllib.request.urlopen(req).read())
+
+# Export a node as PNG
+req = urllib.request.Request(
+    f"https://api.figma.com/v1/images/{FILE_KEY}?ids={NODE_ID}&format=png&scale=2",
+    headers={"X-Figma-Token": FIGMA_TOKEN}
+)
 ```
+
+### Recommended workflow
+Since programmatic image placement is not possible, use this workflow:
+
+1. **Generate screenshots** — use `app-store-screenshots` or `app-store-screenshots-2` skill to export PNGs
+2. **Prepare Figma file** — create frames/pages manually in Figma (or use existing ones)
+3. **Import to Figma** — drag-and-drop exported PNGs onto the canvas, or use **Cmd+Shift+K** (Place Image) to fill existing frames
+4. **Use REST API for reads** — verify file structure, export finalized assets, post review comments
+
+### Figma MCP (not currently available)
+As of 2026-04, Figma's official Dev Mode MCP (`figma-developer-mcp`) is **read-only** — it inspects designs for code generation but cannot create or modify canvas nodes. No write-capable Figma MCP exists yet. If one becomes available, it would be the preferred method.
 
 ### Token resolution
 - Check env var `FIGMA_PERSONAL_TOKEN` first
@@ -522,9 +759,9 @@ data = json.loads(urllib.request.urlopen(req).read())
 - Remind user to rotate token after use if shared in conversation
 
 ### When to use
-- After `/shipyard:connect appstore` — upload subscription screenshots for review
-- After `app-store-screenshots` export — upload marketing slides to Figma for approval
-- After `ios-marketing-capture` — upload raw simulator screenshots for design iteration
+- After `app-store-screenshots` export — read Figma file structure, post comments for review
+- After `ios-marketing-capture` — guide user on importing raw screenshots into Figma
+- After `/shipyard:connect appstore` — verify asset organization before submission
 
 ## App Store Screenshot Skills
 
@@ -536,6 +773,235 @@ Two screenshot generator skills are available. Choose based on your needs:
 | `app-store-screenshots-2` | AI-driven, analyzes codebase for features, generates copy automatically | Quick-start when you want AI to figure out what to highlight |
 
 Both support multi-locale, export at all Apple required sizes, and iPhone mockup frames.
+
+## App Store Connect REST API
+
+The `asc` CLI covers TestFlight and some subscription operations, but full metadata and screenshot sync require the REST API directly. Build a small Python client — it's ~100 LOC and replaces a mess of curl commands and brittle browser automation.
+
+### Auth setup
+
+1. **Create API key** at https://appstoreconnect.apple.com/access/integrations/api
+   - Role: **Admin** or **App Manager** (Developer role cannot edit App Store listings — you'll get 401 on every metadata endpoint even with a valid JWT)
+2. **Download the `.p8` exactly ONCE** — Apple never shows it again. If lost, revoke and regenerate.
+3. **Store at fixed path:**
+   ```
+   ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8  (chmod 600)
+   ```
+4. **Export in `~/.zshrc`:**
+   ```bash
+   export APP_STORE_API_KEY="<10-char key ID>"
+   export APP_STORE_API_ISSUER="<UUID from ASC Integrations page>"
+   ```
+
+### JWT signing — the one gotcha
+
+App Store Connect requires ES256 with signature in **raw r||s** format per RFC 7515 §A.3.
+
+**⚠ PyJWT 1.x emits DER-encoded ECDSA signatures, which Apple rejects with a generic 401.** The JWT looks perfect, the issuer matches, the key has Admin role, `date -u` matches Apple's clock — and it still fails. This wasted several hours of debugging on a real project.
+
+**Solution:** Either use PyJWT ≥2.0 or sign with `cryptography` directly. The `cryptography` approach has no version-drift risk:
+
+```python
+import base64, json, time
+from pathlib import Path
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+
+def _b64url(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+def make_token(key_id: str, issuer: str, p8_path: Path, ttl: int = 1200) -> str:
+    pk = serialization.load_pem_private_key(p8_path.read_bytes(), password=None)
+    now = int(time.time())
+    header = {"alg": "ES256", "kid": key_id, "typ": "JWT"}
+    payload = {"iss": issuer, "iat": now, "exp": now + ttl, "aud": "appstoreconnect-v1"}
+    h = _b64url(json.dumps(header, separators=(",", ":")).encode())
+    p = _b64url(json.dumps(payload, separators=(",", ":")).encode())
+    der = pk.sign(f"{h}.{p}".encode(), ec.ECDSA(hashes.SHA256()))
+    r, s = decode_dss_signature(der)
+    raw = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    return f"{h}.{p}.{_b64url(raw)}"
+```
+
+Apple tokens max out at **20 minutes** (`exp - iat ≤ 1200`). Mint fresh per run; don't cache.
+
+### The resource tree
+
+App Store Connect's data model isn't obvious from the docs. Keep this map handy:
+
+```
+app (bundle ID resolves here)
+├── appInfos
+│   └── appInfoLocalizations (one per locale)
+│       ├── name                ← app name per locale
+│       ├── subtitle            ← app subtitle per locale
+│       └── privacyPolicyUrl
+│   └── primaryCategory         ← LIFESTYLE, HEALTH_AND_FITNESS, etc.
+└── appStoreVersions (one editable at a time)
+    ├── copyright
+    ├── releaseType              ← MANUAL / AFTER_APPROVAL / SCHEDULED
+    ├── appStoreReviewDetail     ← review contact + notes
+    └── appStoreVersionLocalizations (one per locale)
+        ├── description
+        ├── keywords             ← comma-separated, no trailing spaces, ≤100 chars
+        ├── promotionalText      ← editable anytime, ≤170 chars
+        ├── whatsNew             ← release notes, NOT editable on v1.0 initial release
+        ├── marketingUrl
+        ├── supportUrl
+        └── appScreenshotSets (one per display type)
+            └── appScreenshots (3–10 per set)
+```
+
+**Critical distinction:** `name`/`subtitle` live on `appInfoLocalization` (app-wide). `description`/`keywords`/`whatsNew` live on `appStoreVersionLocalization` (version-specific). Beginners confuse these and keep hitting the wrong endpoint.
+
+### Finding the editable version
+
+```python
+def find_editable_version(client, app_id):
+    r = client.get(
+        f"/apps/{app_id}/appStoreVersions",
+        **{"filter[appStoreState]": "PREPARE_FOR_SUBMISSION,DEVELOPER_REJECTED,REJECTED,METADATA_REJECTED,WAITING_FOR_REVIEW,INVALID_BINARY"},
+    )
+    data = r.get("data", [])
+    return data[0] if data else None
+```
+
+Use comma-separated states. If no editable version exists, the user needs to create one in ASC first (requires an uploaded build).
+
+### Screenshot upload — the 3-phase handshake
+
+Apple uses a reservation-then-PUT-then-commit protocol so abandoned uploads don't leave dangling files:
+
+```python
+import hashlib, requests
+
+def upload_screenshot(client, set_id: str, path: Path):
+    data = path.read_bytes()
+    md5 = hashlib.md5(data).hexdigest()
+
+    # Phase 1: reserve
+    resv = client.post("/appScreenshots", {
+        "data": {
+            "type": "appScreenshots",
+            "attributes": {"fileName": path.name, "fileSize": len(data)},
+            "relationships": {
+                "appScreenshotSet": {"data": {"type": "appScreenshotSets", "id": set_id}}
+            },
+        }
+    })
+    sid = resv["data"]["id"]
+    ops = resv["data"]["attributes"]["uploadOperations"]
+
+    # Phase 2: PUT each chunk to Apple's presigned URL
+    for op in ops:
+        headers = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
+        chunk = data[op["offset"] : op["offset"] + op["length"]]
+        requests.request(op["method"], op["url"], headers=headers, data=chunk, timeout=120).raise_for_status()
+
+    # Phase 3: commit
+    client.patch(f"/appScreenshots/{sid}", {
+        "data": {
+            "type": "appScreenshots",
+            "id": sid,
+            "attributes": {"uploaded": True, "sourceFileChecksum": md5},
+        }
+    })
+```
+
+Skip Phase 3 and the screenshot sits forever in `UPLOADING` state. Always include the MD5 — Apple rejects commits without it.
+
+### Display types and sizes
+
+| Display type | Resolution | Device |
+|---|---|---|
+| `APP_IPHONE_67` | 1290×2796 | iPhone 14/15/16/17 Pro Max, Plus |
+| `APP_IPHONE_69` | 1320×2868 | iPhone 16/17 Pro Max |
+| `APP_IPHONE_65` | 1242×2688 or 1284×2778 | iPhone XS Max, 11 Pro Max, 12/13 Pro Max |
+| `APP_IPHONE_61` | 1179×2556 | iPhone 14/15 (non-Pro) |
+| `APP_IPAD_PRO_129` | 2048×2732 | iPad Pro 12.9" |
+| `APP_IPAD_PRO_3GEN_129` | 2064×2752 | iPad Pro M4 13" |
+
+For iPhone 17 Pro captures (native 1206×2622, 6.3"), upscale to 1290×2796 (`APP_IPHONE_67`) — Apple accepts it and derives the 6.9" display from there. Pad with black bars if aspect ratios don't match.
+
+### Idempotency patterns (critical for re-runnable sync)
+
+Mobile metadata sync has to be safe to re-run. These error patterns show up every time:
+
+1. **`409 DUPLICATE` on POST** — locale already exists (auto-created by Apple when version was made). Fall back to GET + PATCH:
+   ```python
+   try:
+       return client.post("/appStoreVersionLocalizations", payload)["data"]
+   except RuntimeError as e:
+       if "DUPLICATE" in str(e) or "already exists" in str(e):
+           current = get_version_localizations(client, version_id).get(locale)
+           return client.patch(f"/appStoreVersionLocalizations/{current['id']}", patch_payload)["data"]
+       raise
+   ```
+
+2. **`409 STATE_ERROR` on `whatsNew`** — Apple disallows "What's New" on first-version submissions (1.0). There's nothing "new" about a first release. Either skip entirely for 1.0 or try-catch:
+   ```python
+   def _try_patch_whats_new(client, loc_id, whats_new):
+       try:
+           client.patch(f"/appStoreVersionLocalizations/{loc_id}",
+               {"data": {"type": "appStoreVersionLocalizations", "id": loc_id,
+                         "attributes": {"whatsNew": whats_new}}})
+       except RuntimeError as e:
+           if "STATE_ERROR" in str(e) or "cannot be edited" in str(e):
+               return  # silently skip on first release
+           raise
+   ```
+
+3. **Screenshot set: create once, wipe contents each run.** Don't delete the `appScreenshotSet` itself — its relationship to `appStoreVersionLocalization` is stable. Just delete all `appScreenshots` inside it and re-upload.
+
+4. **Stale sets from past display-type changes** — if someone uploaded to `APP_IPHONE_61` in a prior run and you're now uploading to `APP_IPHONE_67`, the old set lingers. Clean it up or ASC shows mixed sizes.
+
+### Recommended file layout
+
+Store metadata as files so they're reviewable in git (without the raw binaries — .gitignore `marketing/`):
+
+```
+marketing/
+├── asc-metadata/
+│   ├── shared.json                    ← URLs, copyright, review info, category, release type
+│   └── <locale>/
+│       ├── name.txt
+│       ├── subtitle.txt
+│       ├── description.txt
+│       ├── keywords.txt
+│       ├── promotional_text.txt
+│       └── release_notes.txt
+└── asc-screenshots/
+    └── <locale>/<display-slug>/*.png
+```
+
+This separates content (editable by marketing/copywriters) from the sync logic (editable by engineers). Copywriters PR their `.txt` changes; engineers re-run the sync.
+
+### Common 401 debugging flow
+
+When you get 401 `NOT_AUTHORIZED` with a correctly formed JWT:
+
+1. **Check key role** at https://appstoreconnect.apple.com/access/integrations/api — must be **Admin** or **App Manager**
+2. **Check "Last used" column** — if it updates after your attempts, Apple IS receiving the token; problem is with signature or issuer match
+3. **Check signature format** — if using PyJWT, check version with `pip show pyjwt`. Anything <2.0 emits DER format → rejected. Upgrade or switch to `cryptography` direct signing
+4. **Check Issuer ID** — the UUID at the top of the Integrations page, above the keys table. Must match `APP_STORE_API_ISSUER` exactly
+5. **Check `.p8` file integrity** — `openssl ec -in AuthKey_XXX.p8 -noout` should succeed; ECDSA P-256 key
+6. **Clock skew** — `date -u` vs `curl -sI https://api.appstoreconnect.apple.com/ | grep -i date:`. Apple tolerates ~5 min drift
+7. **Nuclear option** — revoke key, generate new one, download new `.p8`, update env. Cheapest way to rule out stale/mismatched key material
+
+### When to use the `asc` CLI vs REST API
+
+| Task | Tool |
+|---|---|
+| Upload build from CLI | `xcrun altool` or `asc` CLI |
+| TestFlight group/tester management | `asc` CLI |
+| App metadata (name, description, keywords) sync | REST API (Python client) |
+| Screenshot upload | REST API (CLI support is flaky) |
+| Subscription product CRUD | Either (REST is more reliable for bulk ops) |
+| Review submission | REST API via `reviewSubmissions` endpoint |
+| Pricing tier updates | REST API |
+
+---
 
 ## Rules
 
