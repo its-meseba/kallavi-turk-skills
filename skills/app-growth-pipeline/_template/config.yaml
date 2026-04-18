@@ -1,0 +1,94 @@
+# Per-app growth pipeline config
+# Fill in on setup. Updateable anytime.
+
+app:
+  name: ""                # e.g., "HabitAdd"
+  slug: ""                # e.g., "habitadd"
+  bundle_ids:
+    ios: ""               # e.g., "com.lumiostudio.habitadd"
+    android: ""           # e.g., "com.lumiostudio.habitadd"
+  app_store_ids:
+    ios: ""               # numeric App Store ID
+    android: ""           # package name again
+
+audience:
+  languages: [en]         # e.g., [en] or [tr, en]
+  countries: []           # ISO codes; empty = global
+  timezone: "Europe/Istanbul"
+
+platforms:
+  tiktok: true
+  instagram_reels: true
+  youtube_shorts: true
+
+# Default track preference for new hooks
+# A = validation/zero-cost (Pexels + FFmpeg)
+# B = paid AI or UGC
+# hybrid = B hero + A b-roll
+default_track: A
+
+# Distribution of formats in a 20-hook batch (see references/hook-formats.md)
+batch_distribution:
+  seven_second_pexels: 0.40
+  list_payoff: 0.20
+  screen_recording_narrated: 0.15
+  before_after: 0.10
+  ugc_reaction: 0.10
+  founder_pov: 0.05
+
+# Budget caps (USD; scripts enforce these)
+budget:
+  max_per_hook_usd: 2.00
+  max_per_batch_usd: 40.00
+  max_per_month_usd: 200.00
+
+# Track thresholds — when a hook graduates from A to B
+# See references/track-selection.md
+track_thresholds:
+  mild_signal_views: 5000
+  strong_signal_views: 50000
+  strong_signal_installs: 1
+  share_to_view_ratio: 0.10
+
+# TTS
+tts:
+  default_voice: "hume_octave_warm_female_en"
+  hero_voice: "elevenlabs_rachel"    # premium for hero shots
+  language_voices:
+    en: "hume_octave_warm_female_en"
+    tr: "hume_octave_warm_female_tr"
+
+# Captions
+captions:
+  burn_in_by_default: true
+  default_style: "lumio_bold_yellow"   # maps to assets/caption-styles/
+  submagic_polish_on_track_b: true
+
+# Brand
+brand:
+  primary_color: "#FFD400"
+  secondary_color: "#1A1A1A"
+  font: "Inter-Black"
+  endcard_seconds: 0                  # 0 = disabled for first 2 weeks
+  endcard_asset: "lumio-endcard-9x16.png"
+
+# Scheduling
+posting_windows:
+  tiktok:
+    - {start: "09:00", end: "11:00", weight: 0.3}
+    - {start: "13:00", end: "15:00", weight: 0.2}
+    - {start: "19:00", end: "22:00", weight: 0.5}
+  instagram_reels:
+    - {start: "11:00", end: "13:00", weight: 0.4}
+    - {start: "20:00", end: "22:00", weight: 0.6}
+  youtube_shorts:
+    - {start: "17:00", end: "19:00", weight: 0.5}
+    - {start: "21:00", end: "23:00", weight: 0.5}
+
+caption_variation_mode: "llm_paraphrase"   # spintax | llm_paraphrase | manual
+
+# Attribution (see references/tool-costs.md § Attribution)
+attribution:
+  revenuecat_linking: true
+  singular_enabled: false             # flip to true once SDK integrated
+  bio_link: ""                        # e.g., "https://lumio.link/habitadd"

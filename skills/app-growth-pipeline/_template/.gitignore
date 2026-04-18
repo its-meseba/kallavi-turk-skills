@@ -1,0 +1,13 @@
+# Per-app growth pipeline gitignore
+# Keep briefs, configs, hooks, accounts, and logs in git.
+# Ignore rendered videos and purchased UGC (too heavy + licensed).
+
+videos/
+ugc-library/
+schedules/
+.cache/
+*.log
+
+# Keep the structure but not the content
+!videos/.gitkeep
+!ugc-library/.gitkeep

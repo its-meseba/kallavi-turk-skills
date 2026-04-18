@@ -1,0 +1,1 @@
+{"_note": "One JSON line per published post. Format: {platform, account, hook_id, post_id, url, published_at, views_24h, views_48h, views_7d, saves, shares, comments, link_clicks, installs_attributed}", "_created": true}

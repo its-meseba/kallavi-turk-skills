@@ -1,0 +1,42 @@
+# Per-app social account cluster
+# See references/posting-protocol.md for the 4-week warmup requirement.
+# DO NOT add an account here until it has completed warmup.
+
+accounts:
+  # TikTok cluster (3-4 accounts per app recommended)
+  - handle: ""                        # e.g., "habitadd_focus"
+    platform: tiktok
+    persona: ""                       # e.g., "ADHD/focus angle"
+    language: en
+    warm_date: ""                     # ISO date when 4-week warmup completed
+    status: draft                     # draft | warming | active | paused
+    daily_cap: 2                      # posts/day; see posting-protocol.md
+    posting_windows_override: null    # null = use config.yaml defaults
+    blotato_connection_id: ""         # set after OAuth in Blotato
+    analytics_id: ""                  # TikTok Business API account ID
+
+  # Instagram (1-2 per app)
+  - handle: ""                        # e.g., "habitadd"
+    platform: instagram_reels
+    persona: ""
+    language: en
+    warm_date: ""
+    status: draft
+    daily_cap: 1
+    meta_page_id: ""                  # connected Facebook Page ID
+    meta_ig_business_id: ""
+
+  # YouTube Shorts (1 per app)
+  - handle: ""                        # e.g., "@habitadd"
+    platform: youtube_shorts
+    persona: ""
+    language: en
+    warm_date: ""
+    status: draft
+    daily_cap: 2
+    youtube_channel_id: ""
+
+# Content distribution rule (enforced by schedule_post.py)
+# - Any single hook video: max 2 accounts
+# - Min 6 hours between same-hook posts on different accounts
+# - Never identical captions (auto-varied by caption_variation_mode)
