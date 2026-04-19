@@ -80,6 +80,38 @@ Pick the model based on how much reasoning the browser task requires:
 
 **Default:** Start with Haiku. If the task requires judgment calls (which template to pick, how to interpret UI), use Sonnet. Reserve Opus for flows that repeatedly fail or require deep reasoning about the UI state.
 
+### Plan Execution Subagent Pacing
+
+When executing a multi-task implementation plan (e.g., a shipyard-generated or superpowers plan), match the dispatch pattern and review model to each task's risk profile. This protects the main context from subagent sprawl while keeping review rigor where it matters.
+
+**Batch vs. solo:**
+
+| Task shape | Strategy |
+|------------|----------|
+| Mechanical UI screens with concrete spec code (independent views, components, placeholder wiring) | Batch — one implementer, one combined review |
+| Business logic (ViewModel methods, state machines, service contracts) | Solo — two-stage spec + quality review |
+| Routing / activation forks / deep links | Solo — two-stage review |
+| Cross-cutting analytics wiring | Solo — two-stage review |
+| Localization strings | Direct edit; no review loop |
+| Manual smoke / device walkthrough | User-driven; never dispatch |
+| Final batched commit | Main session; never dispatch |
+
+**Reviewer model tiering:**
+
+| Model | Use for | Examples |
+|-------|---------|----------|
+| **Haiku** | Layout, naming, imports, glass usage, switch exhaustiveness, analytics key presence | Confirming `.glassEffect()` on cards, confirming a placeholder view exists per enum case |
+| **Sonnet** | Pattern conformance, moderate multi-file coherence | Verifying ServiceContainer usage, reducer case coverage |
+| **Opus** | State machine correctness, async safety, spec reconciliation | Reviewing `OnboardingVM.commit(choice:)` or activation-fork routing |
+
+**Default:** Haiku for mechanical reviews, Opus for logic/routing/analytics reviews.
+
+**Reconciliation before dispatch:** Plans drift from the codebase between authoring and execution — verify mock service constructors, VM init parameter order, repository method names, and analytics key properties before briefing the implementer. A 2-minute reconciliation prevents a 30-minute failed implementation.
+
+**Commit discipline:** Implementer subagents must NOT `git add` or `git commit` per task during a multi-task plan. One batched commit at plan end from the main session. State this explicitly in every implementer prompt.
+
+**Verification cadence:** Run build+test at the end of a batch, not per task — unless pbxproj regenerates, shared types change, or a logic task extends an existing test suite. Always prefix xcodegen in sandboxed shells: `USER=$(whoami) LOGNAME=$(whoami) xcodegen generate`. Treat xcodebuild as authoritative; ignore stale SourceKit LSP errors after pbxproj regeneration.
+
 ### Dispatching Playwright Subagents
 
 Use the Agent tool. Always include in the prompt:
