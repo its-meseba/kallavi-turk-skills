@@ -1,0 +1,46 @@
+# Reading Lens — global configuration
+# ====================================
+# Edit BEFORE first use. Paths are absolute.
+
+# Where your Obsidian vault lives on disk.
+vault_path: /path/to/your/obsidian/vault   # EDIT THIS
+
+# Subfolder inside the vault where book notes go.
+# Default: Read/  →  your books will live at {vault_path}/Read/{Book Name (Author)}/
+books_folder: Read
+
+# -----------------------------------------------------------------------------
+# GLOBAL LENSES
+# -----------------------------------------------------------------------------
+# These are the perspectives Reading Lens uses to analyze books.
+# Each lens has a `role` and comma-separated `interests`.
+#
+# When you run /reading-lens:setup on a new book, the skill will ask whether
+# to (a) use all globals, (b) choose a subset, (c) define new ones just for
+# that book, or (d) combine globals + new.
+#
+# Once chosen for a book, lenses are frozen in that book's 0. General.md
+# frontmatter — so changing this list later does NOT rewrite old books.
+#
+# Manage globals with:
+#     /reading-lens:lenses              # list
+#     /reading-lens:lenses add          # add a new lens
+#     /reading-lens:lenses edit <role>  # edit an existing lens
+#     /reading-lens:lenses remove <role># remove a lens
+# -----------------------------------------------------------------------------
+
+global_lenses:
+  - role: Product Manager
+    interests: product, growth, monetization
+  - role: CEO
+    interests: strategy, team, decisions
+  - role: Entrepreneur
+    interests: 0→1, risk, execution
+
+# -----------------------------------------------------------------------------
+# OPTIONAL — Notion mirror target for /reading-lens:to-notion
+# Set the URL of the parent page under which book pages will be created.
+# Requires Notion MCP to be connected.
+# -----------------------------------------------------------------------------
+
+# notion_parent_url: https://www.notion.so/your-workspace/Reading-Notes-xxxxxxxx
