@@ -24,16 +24,16 @@ Claude Code picks up new skills in this directory without a restart (file-watche
 
 Should list `app-growth-pipeline`.
 
-### Option B: Symlink from `kallavi-turk-skills` (recommended for solo devs who version-control skills)
+### Option B: Symlink from `meseba-skills` (recommended for solo devs who version-control skills)
 
 ```bash
-# Keep canonical copy in your Kallavi skills repo
-cd ~/dev/kallavi-turk-skills/skills
+# Keep canonical copy in your skills repo
+cd ~/dev/meseba-skills/skills
 git add app-growth-pipeline
 git commit -m "app-growth-pipeline: initial scaffold"
 
 # Symlink into ~/.claude/skills so Claude Code sees it
-ln -s ~/dev/kallavi-turk-skills/skills/app-growth-pipeline ~/.claude/skills/app-growth-pipeline
+ln -s ~/dev/meseba-skills/skills/app-growth-pipeline ~/.claude/skills/app-growth-pipeline
 ```
 
 Edits to the repo are live; git history preserves skill evolution.
