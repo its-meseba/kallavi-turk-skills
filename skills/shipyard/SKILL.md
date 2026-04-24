@@ -411,9 +411,18 @@ Detects the project platform and installs all relevant Claude Code skills via `g
    Only add references for skills relevant to the detected platform. Do NOT duplicate references that already exist in the file.
 5. **Create `ai-rules/` folder** — if it doesn't exist, create `ai-rules/` in the project root with domain-specific rule files tailored to the detected platform. This follows the Zabłocki progressive-disclosure pattern: a `rule-loading.md` index tells the LLM which rules to load on demand.
 
+   **CRITICAL — Lazy-load discipline:** The project `CLAUDE.md` must reference ONLY `@ai-rules/rule-loading.md` (the index). Do NOT add `@ai-rules/general.md` or any other ai-rule file to `CLAUDE.md` via `@` — doing so defeats the progressive-disclosure design and silently costs ~130+ lines of context on every turn, even for tasks that don't touch Swift code (planning, docs, file lookups). `general.md` is loaded by the LLM on Swift code read/write triggers, not eagerly.
+
+   **CRITICAL — Strict-but-fast philosophy:** Rule files enforce discipline (typed errors, DI, immutability, no magic numbers) but MUST NOT bloat every code change with ceremony. Apply these scope rules when writing rule files for a new project:
+
+   - **Protocol + mock requirement is scoped**, not universal. Require protocols only for services that are (a) unit-tested with mocks, (b) routed/fanned-out (analytics routers), or (c) network-facing (repos, auth, paywall, LLM clients). Simple concrete helpers (image resize, theme math, pure utility wrappers) stay concrete-only. Phrase rule 4 accordingly.
+   - **Localization is phased.** Views always use key-based localization (e.g. `Text("key")` for SwiftUI auto-extraction). VMs/Services are allowed raw English during the English-only shipping window; flip to `String(localized:)` in the same PR that adds the second locale. Phrase rule 5 accordingly — do NOT write "every user-facing string must be a localization key" as an absolute.
+   - **Quality gates in ONE place.** Put a consolidated, scope-grouped `Session Quality Gates` block in `rule-loading.md`. Do NOT duplicate checklists into `general.md`, `view.md`, `view-model.md`, `services.md`, `testing.md` — each of those files should have a one-line pointer "See `rule-loading.md` → Session Quality Gates". Otherwise the LLM runs the same checklist 5× per task.
+   - **File-size limits are soft guidance, not blockers.** 200-line view soft cap, 400-line file soft cap, 800-line hard cap. Don't force mid-implementation refactors before the feature is stable.
+
    **For iOS projects, create these files:**
    - `ai-rules/rule-loading.md` — index of all rule files with loading triggers and keywords (MUST list `app-store.md` with triggers: "submit", "release", "screenshot", "metadata", "ASC", "App Store Connect", "localization", "review notes")
-   - `ai-rules/general.md` — core Swift engineering rules (always loaded): progressive architecture, error handling, dependency injection, localization, quality gates, anti-patterns
+   - `ai-rules/general.md` — core Swift engineering rules (**trigger-loaded on first Swift code read/write**, NOT via `@` in CLAUDE.md): progressive architecture, error handling, dependency injection, localization, quality gates, anti-patterns
    - `ai-rules/view.md` — SwiftUI view rules: Liquid Glass API patterns, modifier order, design system tokens, animation patterns (staggered reveal, celebration, content transitions), reusable components list
    - `ai-rules/view-model.md` — ViewModel rules: @Observable pattern, computed derived state, async data loading, String(localized:), state ownership
    - `ai-rules/services.md` — services/SDK rules: AnalyticsRouter pattern, graceful SDK fallbacks, revenue event formatting, HealthKit/FamilyControls patterns
